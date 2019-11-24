@@ -1,35 +1,26 @@
-//main.js
-var video            = document.querySelector('video');
-var button           = document.querySelector('#btn-test-getDisplayMedia');
-var textarea         = document.querySelector('#capabilities');
-var settings         = document.querySelector('#settings');
-var aspectRatio      = document.querySelector('#aspectRatio');
-var frameRate        = document.querySelector('#frameRate');
-var resolutions      = document.querySelector('#resolutions');
-var cursor           = document.querySelector('#cursor');
-var displaySurface   = document.querySelector('#displaySurface');
-var logicalSurface   = document.querySelector('#logicalSurface');
-// var videoKind        = document.querySelector('#videoKind');
+//share.js
 
-button.onclick = function() {
+function doGetScreenSignal() {
     this.disabled = true;
-    
+
     invokeGetDisplayMedia(function(screen) {
         addStreamStopListener(screen, function() {
             location.reload();
         });
+		
+		localStream = screen;        
         
-        video.srcObject = screen;
+		localvideo.srcObject = screen;
 
         var _capabilities = screen.getTracks()[0].getCapabilities();
-        capabilities.value = 'capabilities:\n\n' + JSON.stringify(_capabilities, null, '\t');
-        capabilities.style.display = '';
+        $(capabilities).val('capabilities:\n\n' + JSON.stringify(_capabilities, null, '\t'));
+        $(capabilities).css({display: 'block'});
 
         var _settings = screen.getTracks()[0].getSettings();
-        settings.value = 'settings:\n\n' + JSON.stringify(_settings, null, '\t');
-        settings.style.display = '';
+        $(settings).val('settings:\n\n' + JSON.stringify(_settings, null, '\t'));
+        $(settings).css({display: 'block'});
     }, function(e) {
-        button.disabled = false;
+        //button.disabled = false;
 
         var error = {
             name: e.name || 'UnKnown',
@@ -50,16 +41,6 @@ button.onclick = function() {
 
         alert('Unable to capture your screen.\n\n' + error.name + '\n\n' + error.message + '\n\n' + error.stack);
     });
-};
-
-if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
-    var error = 'Your browser does NOT supports getDisplayMedia API.';
-    document.querySelector('h1').innerHTML = error;
-    document.querySelector('h1').style.color = 'red';
-
-    document.querySelector('video').style.display = 'none';
-    button.style.display = 'none';
-    throw new Error(error);
 }
 
 function invokeGetDisplayMedia(success, error) {

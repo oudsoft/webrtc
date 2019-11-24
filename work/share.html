@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>share screen demo</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src="js/share.js"></script>
+		<link rel="stylesheet" href="css/share.css" />
+	</head>
+	<body>
+		<h1>share screen demo</h1>
+		<div id="Main">
+			<div id="localScreen">
+				<h2>Local</h2>
+			    <video id="localVideo" controls autoplay playsinline muted="false" volume="0"></video>
+				<div id="control-local-screen"></div>
+				<button id="btn-test-getDisplayMedia" onclick="doGetScreenSignal()">Get Screen Signal</button>
+			</div>
+			
+			<div id="remoteScreen">
+				<h2>Remote</h2>
+				<video id="remoteVideo" autoplay playsinline></video>
+			</div>
+			
+		</div>
+	</body>
+</html>
+
+<script>
+	var localvideo = document.querySelector('#localVideo');
+	var remotevideo = document.querySelector('#remoteVideo');
+
+	var localStream;
+	var remoteStream;
+
+	$(document).ready(function() {
+		$('#control-local-screen').load('controllocal.html', function() {
+			var textarea = $('#capabilities');
+			var settings  = $('#settings');
+			var aspectRatio  = $('#aspectRatio');
+			var frameRate  = $('#frameRate');
+			var resolutions  = $('#resolutions');
+			var cursor = $('#cursor');
+			var displaySurface = $('#displaySurface');
+			var logicalSurface = $('#logicalSurface');
+
+			if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
+				var error = 'Your browser does NOT supports getDisplayMedia API.';
+				$('h1').html(error);
+				$('h1').css('color', 'red');
+
+				$('video').css({display: 'none'});
+				$('#btn-test-getDisplayMedia').css({display: 'none'});
+				throw new Error(error);
+			}
+
+		})
+	});
+</script>
