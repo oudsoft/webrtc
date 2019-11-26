@@ -77,13 +77,21 @@ socket.on('message', function(message) {
       //maybeStart();
     }
 	sdp = new RTCSessionDescription(message);
-    pc1.setRemoteDescription(sdp);
-	//pc2.setLocalDescription(sdp);
+    if (pc1){
+		pc1.setRemoteDescription(sdp);
+    }
+	if (pc2){
+		pc2.setRemoteDescription(sdp);
+	}
     doAnswer();
   } else if (message.type === 'answer' && isStarted) {
 	sdp = new RTCSessionDescription(message);
-    pc1.setRemoteDescription(sdp);
-    //pc2.setLocalDescription(sdp);
+	if (pc1){
+		pc1.setRemoteDescription(sdp);
+	}
+	if (pc2){
+		pc2.setRemoteDescription(sdp);
+	}
   } else if (message.type === 'candidate' && isStarted) {
     var candidate = new RTCIceCandidate({
       sdpMLineIndex: message.label,
@@ -107,7 +115,7 @@ function gotMediaStream(stream) {
   localMediaStream = stream;
   localMediaVideo.srcObject = stream;
   /*
-  sendMessage('got user local media');
+  sendMessage('got user media');
   if (isInitiator) {
     maybeStart();
   }
@@ -128,8 +136,6 @@ function doGetLocalMedia() {
 function doStartShareScreen(){
     createPeerConnection();
     pc1.addStream(localStream);
-	createMediaPeerConnection();
-	pc2.addStream(localMediaStream);
     isStarted = true;
 	doCall();
 }
@@ -138,7 +144,17 @@ function doStopShareScreen() {
 	hangup();
 }
 
-function doStopLocalMedia() {
+function doStartShareLocalMedia() {
+	createMediaPeerConnection();
+	pc2.addStream(localMediaStream);
+    isStarted = true;
+	//doCall();
+	console.log('LocalMedia Sending offer to peer');
+	//pc1.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+	pc2.createOffer(setLocalUserMediaAndSendMessage, handleCreateOfferError);
+}
+
+function doStopShareLocalMedia() {
 	localMediaStream.getTracks()[0].stop();
 	localMediaStream.getTracks()[1].stop();
 }
@@ -295,7 +311,9 @@ function handleRemoteStreamAdded(event) {
 function handleRemoteUserMediaStreamAdded(event) {
   console.log('Remote user media stream added.');
   remoteMediaStream = event.stream;
-  remoteMediaVideo.srcObject = remoteMediaStream;
+  if (remoteMediaVideo) {
+	remoteMediaVideo.srcObject = remoteMediaStream;
+  }
 }
 
 function handleRemoteStreamRemoved(event) {

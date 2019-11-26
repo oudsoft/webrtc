@@ -27,7 +27,10 @@
 				<video id="remoteVideo" autoplay playsinline></video>
 				<div>&nbsp;</div>
 				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
-				<button id="btn-stop-getLocalMedia" onclick="doStopLocalMedia()">Stop Local Media</button>
+				<button id="btn-start-shareLocalMedia" onclick="doStartShareLocalMedia()">Start Share Local Media</button>
+				<button id="btn-stop-shareLocalMedia" onclick="doStopShareLocalMedia()">Stop Share Local Media</button>
+				<div>&nbsp;</div>
+				<video id="remoteMediaVideo" autoplay playsinline></video>
 			</div>
 		</div>
 	</body>
@@ -37,6 +40,8 @@
 	var localVideo = document.querySelector('#localVideo');
 	//var remoteVideo = document.querySelector('#remoteVideo');
 	var localMediaVideo = document.querySelector('#remoteVideo');
+
+	var remoteMediaVideo = document.querySelector('#remoteMediaVideo');
 
 	var localStream;
 	var remoteStream;
