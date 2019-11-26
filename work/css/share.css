@@ -27,3 +27,12 @@ video {
 	border-radius: 5px;
 	border: 1px solid black;
 }
+#clientScreen {
+	border: 3px solid red;
+	position: absolute;
+	margin-right: 10px;
+	left: 5px;
+	top: 5px;
+	bottom: 5px;
+	right: 30%;
+}
