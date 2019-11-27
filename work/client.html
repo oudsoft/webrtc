@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>share screen demo</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/client.js"></script>
+		<link rel="stylesheet" href="css/share.css" />
+	</head>
+	<body>
+		<h1>share screen demo</h1>
+		<div id="Main">
+			<h2>Remote</h2>
+			<video id="remoteVideo" autoplay playsinline></video>
+			
+		</div>
+	</body>
+</html>
+
+<script>
+
+	var remotevideo = document.querySelector('#remoteVideo');
+
+	var remoteStream;
+
+	$(document).ready(function() {
+		if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
+			var error = 'Your browser does NOT supports getDisplayMedia API.';
+			$('h1').html(error);
+			$('h1').css('color', 'red');
+
+			$('video').css({display: 'none'});
+			$('#btn-test-getDisplayMedia').css({display: 'none'});
+			throw new Error(error);
+		}
+	});
+</script>
