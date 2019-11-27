@@ -1,160 +1,13 @@
 //share.js
 
-function doGetScreenSignal() {
-    this.disabled = true;
+'use strict';
 
-    invokeGetDisplayMedia(function(screen) {
-        addStreamStopListener(screen, function() {
-            location.reload();
-        });
-		
-		localStream = screen;        
-        
-		localvideo.srcObject = screen;
-
-		if (isInitiator) {
-			maybeStart();
-		}
-
-        var _capabilities = screen.getTracks()[0].getCapabilities();
-        $(capabilities).val('capabilities:\n\n' + JSON.stringify(_capabilities, null, '\t'));
-        $(capabilities).css({display: 'block'});
-
-        var _settings = screen.getTracks()[0].getSettings();
-        $(settings).val('settings:\n\n' + JSON.stringify(_settings, null, '\t'));
-        $(settings).css({display: 'block'});
-    }, function(e) {
-        //button.disabled = false;
-
-        var error = {
-            name: e.name || 'UnKnown',
-            message: e.message || 'UnKnown',
-            stack: e.stack || 'UnKnown'
-        };
-
-        if(error.name === 'PermissionDeniedError') {
-            if(location.protocol !== 'https:') {
-                error.message = 'Please use HTTPs.';
-                error.stack   = 'HTTPs is required.';
-            }
-        }
-
-        console.error(error.name);
-        console.error(error.message);
-        console.error(error.stack);
-
-        alert('Unable to capture your screen.\n\n' + error.name + '\n\n' + error.message + '\n\n' + error.stack);
-    });
-}
-
-function invokeGetDisplayMedia(success, error) {
-    var videoConstraints = {};
-
-    if(aspectRatio.value !== 'default') {
-        videoConstraints.aspectRatio = aspectRatio.value;
-    }
-
-    if(frameRate.value !== 'default') {
-        videoConstraints.frameRate = frameRate.value;
-    }
-
-    if(cursor.value !== 'default') {
-        videoConstraints.cursor = cursor.value;
-    }
-
-    if(displaySurface.value !== 'default') {
-        videoConstraints.displaySurface = displaySurface.value;
-    }
-
-    if(logicalSurface.value !== 'default') {
-        videoConstraints.logicalSurface = true;
-    }
-
-    if(resolutions.value !== 'default') {
-        if (resolutions.value === 'fit-screen') {
-            videoConstraints.width = screen.width;
-            videoConstraints.height = screen.height;
-        }
-
-        if (resolutions.value === '4K') {
-            videoConstraints.width = 3840;
-            videoConstraints.height = 2160;
-        }
-
-        if (resolutions.value === '1080p') {
-            videoConstraints.width = 1920;
-            videoConstraints.height = 1080;
-        }
-
-        if (resolutions.value === '720p') {
-            videoConstraints.width = 1280;
-            videoConstraints.height = 720;
-        }
-
-        if (resolutions.value === '480p') {
-            videoConstraints.width = 853;
-            videoConstraints.height = 480;
-        }
-
-        if (resolutions.value === '360p') {
-            videoConstraints.width = 640;
-            videoConstraints.height = 360;
-        }
-
-        /*
-        videoConstraints.width = {
-            exact: videoConstraints.width
-        };
-
-        videoConstraints.height = {
-            exact: videoConstraints.height
-        };
-        */
-    }
-
-    if(!Object.keys(videoConstraints).length) {
-        videoConstraints = true;
-    }
-
-    var displayMediaStreamConstraints = {
-        video: videoConstraints
-    };
-
-    if(navigator.mediaDevices.getDisplayMedia) {
-        navigator.mediaDevices.getDisplayMedia(displayMediaStreamConstraints).then(success).catch(error);
-    }
-    else {
-        navigator.getDisplayMedia(displayMediaStreamConstraints).then(success).catch(error);
-    }
-}
-
-function addStreamStopListener(stream, callback) {
-    stream.addEventListener('ended', function() {
-        callback();
-        callback = function() {};
-    }, false);
-    stream.addEventListener('inactive', function() {
-        callback();
-        callback = function() {};
-    }, false);
-    stream.getTracks().forEach(function(track) {
-        track.addEventListener('ended', function() {
-            callback();
-            callback = function() {};
-        }, false);
-        track.addEventListener('inactive', function() {
-            callback();
-            callback = function() {};
-        }, false);
-    });
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////
 var isChannelReady = false;
 var isInitiator = false;
 var isStarted = false;
-var pc;
+//var localStream;
+var pc1, pc2;  //pc1 for screen and pc2 for user media
+//var remoteStream;
 var turnReady;
 
 var pcConfig = {
@@ -216,48 +69,95 @@ function sendMessage(message) {
 // This client receives a message
 socket.on('message', function(message) {
   console.log('Client received message:', message);
+  var sdp;
   if (message === 'got user media') {
-    maybeStart();
+    //maybeStart();
   } else if (message.type === 'offer') {
     if (!isInitiator && !isStarted) {
-      maybeStart();
+      //maybeStart();
     }
-    pc.setRemoteDescription(new RTCSessionDescription(message));
+	sdp = new RTCSessionDescription(message);
+    if (pc1){
+		pc1.setRemoteDescription(sdp);
+    }
+	if (pc2){
+		pc2.setRemoteDescription(sdp);
+	}
     doAnswer();
   } else if (message.type === 'answer' && isStarted) {
-    pc.setRemoteDescription(new RTCSessionDescription(message));
+	sdp = new RTCSessionDescription(message);
+	if (pc1){
+		pc1.setRemoteDescription(sdp);
+	}
+	if (pc2){
+		pc2.setRemoteDescription(sdp);
+	}
   } else if (message.type === 'candidate' && isStarted) {
     var candidate = new RTCIceCandidate({
       sdpMLineIndex: message.label,
       candidate: message.candidate
     });
-    pc.addIceCandidate(candidate);
+    pc1.addIceCandidate(candidate);
+	//pc2.addIceCandidate(candidate);
   } else if (message === 'bye' && isStarted) {
     handleRemoteHangup();
   }
 });
 
 ////////////////////////////////////////////////////
-/*
-navigator.mediaDevices.getUserMedia({
-  audio: false,
-  video: true
-})
-.then(gotStream)
-.catch(function(e) {
-  alert('getUserMedia() error: ' + e.name);
-});
 
-function gotStream(stream) {
-  console.log('Adding local stream.');
-  localStream = stream;
-  localVideo.srcObject = stream;
+//var localVideo = document.querySelector('#localVideo');
+//var remoteVideo = document.querySelector('#remoteVideo');
+
+
+function gotMediaStream(stream) {
+  console.log('Adding local media stream.');
+  localMediaStream = stream;
+  localMediaVideo.srcObject = stream;
+  /*
   sendMessage('got user media');
   if (isInitiator) {
     maybeStart();
   }
+  */
 }
-*/
+
+function doGetLocalMedia() {
+	navigator.mediaDevices.getUserMedia({
+	  audio: true,
+	  video: true
+	})
+	.then(gotMediaStream)
+	.catch(function(e) {
+	  alert('getUserMedia() error: ' + e.name);
+	});
+}
+
+function doStartShareScreen(){
+    createPeerConnection();
+    pc1.addStream(localStream);
+    isStarted = true;
+	doCall();
+}
+
+function doStopShareScreen() {
+	hangup();
+}
+
+function doStartShareLocalMedia() {
+	createMediaPeerConnection();
+	pc2.addStream(localMediaStream);
+    isStarted = true;
+	//doCall();
+	console.log('LocalMedia Sending offer to peer');
+	//pc1.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+	pc2.createOffer(setLocalUserMediaAndSendMessage, handleCreateOfferError);
+}
+
+function doStopShareLocalMedia() {
+	localMediaStream.getTracks()[0].stop();
+	localMediaStream.getTracks()[1].stop();
+}
 
 var constraints = {
   video: true
@@ -273,31 +173,45 @@ if (location.hostname !== 'localhost') {
 
 function maybeStart() {
   console.log('>>>>>>> maybeStart() ', isStarted, localStream, isChannelReady);
-  //if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
+  if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
     console.log('>>>>>> creating peer connection');
     createPeerConnection();
-    pc.addStream(localStream);
+    pc1.addStream(localStream);
     isStarted = true;
     console.log('isInitiator', isInitiator);
     if (isInitiator) {
       doCall();
     }
-  //}
+  }
 }
-
+/*
 window.onbeforeunload = function() {
   sendMessage('bye');
 };
-
+*/
 /////////////////////////////////////////////////////////
 
 function createPeerConnection() {
   try {
-    pc = new RTCPeerConnection(null);
-    pc.onicecandidate = handleIceCandidate;
-    pc.onaddstream = handleRemoteStreamAdded;
-    pc.onremovestream = handleRemoteStreamRemoved;
-    console.log('Created RTCPeerConnnection');
+    pc1 = new RTCPeerConnection(null);
+    pc1.onicecandidate = handleIceCandidate;
+    pc1.onaddstream = handleRemoteStreamAdded;
+    pc1.onremovestream = handleRemoteStreamRemoved;
+    console.log('Created RTCPeerConnnection for User Screen');
+  } catch (e) {
+    console.log('Failed to create PeerConnection, exception: ' + e.message);
+    alert('Cannot create RTCPeerConnection object.');
+    return;
+  }
+}
+
+function createMediaPeerConnection() {
+  try {
+    pc2 = new RTCPeerConnection(null);
+    pc2.onicecandidate = handleIceCandidate;
+    pc2.onaddstream = handleRemoteUserMediaStreamAdded;
+    pc2.onremovestream = handleRemoteStreamRemoved;
+    console.log('Created RTCPeerConnnection for User Media');
   } catch (e) {
     console.log('Failed to create PeerConnection, exception: ' + e.message);
     alert('Cannot create RTCPeerConnection object.');
@@ -325,25 +239,38 @@ function handleCreateOfferError(event) {
 
 function doCall() {
   console.log('Sending offer to peer');
-  pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+  pc1.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+  //pc2.createOffer(setLocalUserMediaAndSendMessage, handleCreateOfferError);
 }
 
 function doAnswer() {
   console.log('Sending answer to peer.');
-  pc.createAnswer().then(
+  pc1.createAnswer().then(
     setLocalAndSendMessage,
     onCreateSessionDescriptionError
   );
+  /*
+  pc2.createAnswer().then(
+    setLocalUserMediaAndSendMessage,
+    onCreateSessionDescriptionError
+  );
+  */
 }
 
 function setLocalAndSendMessage(sessionDescription) {
-  pc.setLocalDescription(sessionDescription);
+  pc1.setLocalDescription(sessionDescription);
   console.log('setLocalAndSendMessage sending message', sessionDescription);
   sendMessage(sessionDescription);
 }
 
+function setLocalUserMediaAndSendMessage(sessionDescription) {
+  pc2.setRemoteDescription(sessionDescription);
+  console.log('setLocalUserMediaAndSendMessage sending message', sessionDescription);
+  sendMessage(sessionDescription);
+}
+
 function onCreateSessionDescriptionError(error) {
-  trace('Failed to create session description: ' + error.toString());
+  console.log('Failed to create session description: ' + error.toString());
 }
 
 function requestTurn(turnURL) {
@@ -381,6 +308,14 @@ function handleRemoteStreamAdded(event) {
   remoteVideo.srcObject = remoteStream;
 }
 
+function handleRemoteUserMediaStreamAdded(event) {
+  console.log('Remote user media stream added.');
+  remoteMediaStream = event.stream;
+  if (remoteMediaVideo) {
+	remoteMediaVideo.srcObject = remoteMediaStream;
+  }
+}
+
 function handleRemoteStreamRemoved(event) {
   console.log('Remote stream removed. Event: ', event);
 }
@@ -399,6 +334,8 @@ function handleRemoteHangup() {
 
 function stop() {
   isStarted = false;
-  pc.close();
-  pc = null;
+  pc1.close();
+  pc1 = null;
+  pc2.close();
+  pc2 = null;
 }

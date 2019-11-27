@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>share screen demo</title>
+		<title>Share Screen Demo</title>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
@@ -9,30 +9,45 @@
 		<link rel="stylesheet" href="css/share.css" />
 	</head>
 	<body>
-		<h1>share screen demo</h1>
+		<h1>Master Screen</h1>
 		<div id="Main">
 			<div id="localScreen">
-				<h2>Local</h2>
+				<h2>Local Screen</h2>
 			    <video id="localVideo" controls autoplay playsinline muted="false" volume="0"></video>
 				<div id="control-local-screen"></div>
+				<div>&nbsp;</div>
 				<button id="btn-test-getDisplayMedia" onclick="doGetScreenSignal()">Get Screen Signal</button>
+				<button id="btn-start-share" onclick="doStartShareScreen()">Start Share Screen</button>
+				<button id="btn-stop-share" onclick="doStopShareScreen()">Stop Share Screen</button>
+				<div>&nbsp;</div>
 			</div>
 			
 			<div id="remoteScreen">
-				<h2>Remote</h2>
+				<h2>Local Media (Camera)</h2>
 				<video id="remoteVideo" autoplay playsinline></video>
+				<div>&nbsp;</div>
+				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
+				<button id="btn-start-shareLocalMedia" onclick="doStartShareLocalMedia()">Start Share Local Media</button>
+				<button id="btn-stop-shareLocalMedia" onclick="doStopShareLocalMedia()">Stop Share Local Media</button>
+				<div>&nbsp;</div>
+				<video id="remoteMediaVideo" autoplay playsinline></video>
 			</div>
-			
 		</div>
 	</body>
 </html>
 
 <script>
-	var localvideo = document.querySelector('#localVideo');
-	var remotevideo = document.querySelector('#remoteVideo');
+	var localVideo = document.querySelector('#localVideo');
+	//var remoteVideo = document.querySelector('#remoteVideo');
+	var localMediaVideo = document.querySelector('#remoteVideo');
+
+	var remoteMediaVideo = document.querySelector('#remoteMediaVideo');
 
 	var localStream;
 	var remoteStream;
+
+	var localMediaStream;
+	var remoteMediaStream;
 
 	$(document).ready(function() {
 		$('#control-local-screen').load('controllocal.html', function() {
