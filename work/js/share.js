@@ -6,7 +6,7 @@ var isChannelReady = false;
 var isInitiator = false;
 var isStarted = false;
 //var localStream;
-var pc1, pc2;  //pc1 for screen and pc2 for user media
+var pc;
 //var remoteStream;
 var turnReady;
 
@@ -77,28 +77,21 @@ socket.on('message', function(message) {
       //maybeStart();
     }
 	sdp = new RTCSessionDescription(message);
-    if (pc1){
-		pc1.setRemoteDescription(sdp);
-    }
-	if (pc2){
-		pc2.setRemoteDescription(sdp);
-	}
+	pc.setRemoteDescription(sdp);
     doAnswer();
   } else if (message.type === 'answer' && isStarted) {
 	sdp = new RTCSessionDescription(message);
-	if (pc1){
-		pc1.setRemoteDescription(sdp);
-	}
-	if (pc2){
-		pc2.setRemoteDescription(sdp);
-	}
-  } else if (message.type === 'candidate' && isStarted) {
+	pc.setRemoteDescription(sdp);
+  } else if (message.type === 'candidate') {
     var candidate = new RTCIceCandidate({
       sdpMLineIndex: message.label,
       candidate: message.candidate
     });
-    pc1.addIceCandidate(candidate);
-	//pc2.addIceCandidate(candidate);
+    if (isStarted) {
+        pc.addIceCandidate(candidate);
+    } else {
+
+    }
   } else if (message === 'bye' && isStarted) {
     handleRemoteHangup();
   }
@@ -135,7 +128,7 @@ function doGetLocalMedia() {
 
 function doStartShareScreen(){
     createPeerConnection();
-    pc1.addStream(localStream);
+    pc.addStream(localStream);
     isStarted = true;
 	doCall();
 }
@@ -145,13 +138,7 @@ function doStopShareScreen() {
 }
 
 function doStartShareLocalMedia() {
-	createMediaPeerConnection();
-	pc2.addStream(localMediaStream);
-    isStarted = true;
-	//doCall();
-	console.log('LocalMedia Sending offer to peer');
-	//pc1.createOffer(setLocalAndSendMessage, handleCreateOfferError);
-	pc2.createOffer(setLocalUserMediaAndSendMessage, handleCreateOfferError);
+
 }
 
 function doStopShareLocalMedia() {
@@ -176,7 +163,7 @@ function maybeStart() {
   if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
     console.log('>>>>>> creating peer connection');
     createPeerConnection();
-    pc1.addStream(localStream);
+    pc.addStream(localStream);
     isStarted = true;
     console.log('isInitiator', isInitiator);
     if (isInitiator) {
@@ -193,25 +180,11 @@ window.onbeforeunload = function() {
 
 function createPeerConnection() {
   try {
-    pc1 = new RTCPeerConnection(null);
-    pc1.onicecandidate = handleIceCandidate;
-    pc1.onaddstream = handleRemoteStreamAdded;
-    pc1.onremovestream = handleRemoteStreamRemoved;
+    pc = new RTCPeerConnection(null);
+    pc.onicecandidate = handleIceCandidate;
+    pc.onaddstream = handleRemoteStreamAdded;
+    pc.onremovestream = handleRemoteStreamRemoved;
     console.log('Created RTCPeerConnnection for User Screen');
-  } catch (e) {
-    console.log('Failed to create PeerConnection, exception: ' + e.message);
-    alert('Cannot create RTCPeerConnection object.');
-    return;
-  }
-}
-
-function createMediaPeerConnection() {
-  try {
-    pc2 = new RTCPeerConnection(null);
-    pc2.onicecandidate = handleIceCandidate;
-    pc2.onaddstream = handleRemoteUserMediaStreamAdded;
-    pc2.onremovestream = handleRemoteStreamRemoved;
-    console.log('Created RTCPeerConnnection for User Media');
   } catch (e) {
     console.log('Failed to create PeerConnection, exception: ' + e.message);
     alert('Cannot create RTCPeerConnection object.');
@@ -239,33 +212,20 @@ function handleCreateOfferError(event) {
 
 function doCall() {
   console.log('Sending offer to peer');
-  pc1.createOffer(setLocalAndSendMessage, handleCreateOfferError);
-  //pc2.createOffer(setLocalUserMediaAndSendMessage, handleCreateOfferError);
+  pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
 }
 
 function doAnswer() {
   console.log('Sending answer to peer.');
-  pc1.createAnswer().then(
+  pc.createAnswer().then(
     setLocalAndSendMessage,
     onCreateSessionDescriptionError
   );
-  /*
-  pc2.createAnswer().then(
-    setLocalUserMediaAndSendMessage,
-    onCreateSessionDescriptionError
-  );
-  */
 }
 
 function setLocalAndSendMessage(sessionDescription) {
-  pc1.setLocalDescription(sessionDescription);
+  pc.setLocalDescription(sessionDescription);
   console.log('setLocalAndSendMessage sending message', sessionDescription);
-  sendMessage(sessionDescription);
-}
-
-function setLocalUserMediaAndSendMessage(sessionDescription) {
-  pc2.setRemoteDescription(sessionDescription);
-  console.log('setLocalUserMediaAndSendMessage sending message', sessionDescription);
   sendMessage(sessionDescription);
 }
 
@@ -334,8 +294,6 @@ function handleRemoteHangup() {
 
 function stop() {
   isStarted = false;
-  pc1.close();
-  pc1 = null;
-  pc2.close();
-  pc2 = null;
+  pc.close();
+  pc = null;
 }

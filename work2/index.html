@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Share Screen Demo</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/main.js"></script>
+		<link rel="stylesheet" href="css/main.css" />
+	</head>
+	<body>
+		<h1>Master Screen</h1>
+		<div id="Main">
+			<div id="remoteScreen">
+				<h2>Local Media (Camera)</h2>
+				<video id="localMediaVideo" autoplay playsinline></video>
+				<div>&nbsp;</div>
+				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
+				<button id="btn-start-shareLocalMedia" onclick="doStartShareLocalMedia()">Start Share Local Media</button>
+				<button id="btn-stop-shareLocalMedia" onclick="doStopShareLocalMedia()">Stop Share Local Media</button>
+				<div>&nbsp;</div>
+				<video id="remoteMediaVideo" autoplay playsinline></video>
+			</div>
+		</div>
+	</body>
+</html>
+
+<script>
+	var vid = document.querySelector('#localMediaVideo');
+    var vid2 = document.querySelector('#remoteMediaVideo');
+
+	var localMediaStream;
+	var remoteMediaStream;
+
+	$(document).ready(function() {
+	});
+</script>

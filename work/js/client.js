@@ -66,7 +66,7 @@ function sendMessage(message) {
 // This client receives a message
 socket.on('message', function(message) {
   console.log('Client received message:', message);
-  if (message === 'got user media') {
+  if (message === 'got user media') {gotDescription
     maybeStart();
   } else if (message.type === 'offer') {
     if (!isInitiator && !isStarted) {
