@@ -1,0 +1,34 @@
+/* client.css */
+#Main {
+	border: 3px solid blue;
+	position: relative;
+	/* height: 300px; */
+}
+#clientScreen {
+	border: 3px solid red;
+	/* position: absolute; */
+	margin-right: 10px;
+	left: 5px;
+	top: 5px;
+	bottom: 5px;
+	/* right: 30%; */
+	width: 500px;
+}
+video {
+	width: 100%;
+	border-radius: 5px;
+	border: 1px solid black;
+}
+
+#remoteScreenVideo { 
+	 width: 500px; 
+	/* height: 500px; */
+}
+
+#remoteMediaVideo { 
+	 width: 150px; 
+	 /*height: 150px; */
+	 /* position: absolute; */
+	 bottom: 1px; 
+	 right: 1px; 
+}

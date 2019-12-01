@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Share Screen Demo</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/master.js"></script>
+		<link rel="stylesheet" href="css/master.css" />
+	</head>
+	<body>
+		<h1>Master Screen</h1>
+		<div id="Main">
+			<div id="localScreen">
+				<h2>Local Screen</h2>
+			    <video id="localVideo" controls autoplay playsinline muted="false" volume="0"></video>
+				<div id="control-local-screen"></div>
+				<div>&nbsp;</div>
+				<button id="btn-test-getDisplayMedia" onclick="doGetScreenSignal()">Get Screen Signal</button>
+				<button id="btn-start-share" onclick="doStartShareScreen()">Start Share Screen</button>
+				<button id="btn-stop-share" onclick="doStopShareScreen()">Stop Share Screen</button>
+				<div>&nbsp;</div>
+				<video id="remoteVideo" controls autoplay playsinline muted="false" volume="0"></video>
+			</div>
+			
+			<div id="remoteScreen">
+				<h2>Local Media (Camera)</h2>
+				<video id="localMediaVideo" autoplay playsinline></video>
+				<div>&nbsp;</div>
+				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
+				<button id="btn-start-shareLocalMedia" onclick="doStartShareMedia()">Start Share Local Media</button>
+				<button id="btn-stop-shareLocalMedia" onclick="doStopShareMedia()">Stop Share Local Media</button>
+				<div>&nbsp;</div>
+				<video id="remoteMediaVideo" autoplay playsinline></video>
+				<div>&nbsp;</div>
+				<button id="btn-test-call" onclick="doTest()">Test Call</button>
+			</div>
+		</div>
+	</body>
+</html>
+
+<script>
+	var localVideo = document.querySelector('#localVideo');
+	var remoteVideo = document.querySelector('#remoteVideo');
+
+	var localMediaVideo = document.querySelector('#localMediaVideo');
+	var remoteMediaVideo = document.querySelector('#remoteMediaVideo');
+
+	var localStream;
+	var remoteStream;
+
+	var localMediaStream;
+	var remoteMediaStream;
+
+	$(document).ready(function() {
+		$('#control-local-screen').load('controllocal.html', function() {
+			var textarea = $('#capabilities');
+			var settings  = $('#settings');
+			var aspectRatio  = $('#aspectRatio');
+			var frameRate  = $('#frameRate');
+			var resolutions  = $('#resolutions');
+			var cursor = $('#cursor');
+			var displaySurface = $('#displaySurface');
+			var logicalSurface = $('#logicalSurface');
+
+			if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
+				var error = 'Your browser does NOT supports getDisplayMedia API.';
+				$('h1').html(error);
+				$('h1').css('color', 'red');
+
+				$('video').css({display: 'none'});
+				$('#btn-test-getDisplayMedia').css({display: 'none'});
+				throw new Error(error);
+			}
+
+		})
+	});
+</script>
