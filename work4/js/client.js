@@ -1,16 +1,17 @@
 //client.js
-var ws = new WebSocket('ws://localhost:4060');
-var xs = new WebSocket('ws://localhost:4061');
+var ws = new WebSocket('wss://10.1.105.37:8085/socket');
 
 ws.onopen = function () {
-	console.log('WS websocket is connected to the signaling server')
+	console.log('websocket is connected to the signaling server')
 }
 
 ws.onmessage = function (msg) {
 	console.log("WS Got message", msg.data);
-	if ((msg.data !== '') && (msg.data !== 'ws Hello world')) {
+	if ((msg.data !== '') && (msg.data !== 'Hello world')) {
 	   var data = JSON.parse(msg.data); 
-	   switch(data.type) { 
+	   switch(data.channel) { 
+		case "screen":
+		   switch(data.type) { 
 			//when somebody wants to call us 
 			case "offer": 
 				wsHandleOffer(data.offer); 
@@ -27,23 +28,10 @@ ws.onmessage = function (msg) {
 				break; 
 			default: 
 				break; 
-	   }
-	}
-}
-
-ws.onerror = function (err) { 
-   console.log("WS Got error", err); 
-}
-
-xs.onopen = function () {
-	console.log('XS websocket is connected to the signaling server');
-}
-
-xs.onmessage = function (msg) {
-	console.log("XS Got message", msg.data);
-	if ((msg.data !== '') && (msg.data !== 'xs Hello world')) {
-	   var data = JSON.parse(msg.data); 
-	   switch(data.type) { 
+		   }
+		break;
+		case "media":
+		   switch(data.type) { 
 			//when somebody wants to call us 
 			case "offer": 
 				xsHandleOffer(data.offer); 
@@ -60,12 +48,16 @@ xs.onmessage = function (msg) {
 				break; 
 			default: 
 				break; 
-	   }
+		  }
+		break;
+		default: 
+		break; 
 	}
+     }
 }
 
-xs.onerror = function (err) { 
-   console.log("XS Got error", err); 
+ws.onerror = function (err) { 
+   console.log("WS Got error", err); 
 }
 
  //using Google public stun server 
@@ -109,6 +101,7 @@ function doInitStream() {
 	 remoteConn.onicecandidate = function (event) { 
 		if (event.candidate) { 
 		   ws.send(JSON.stringify({ 
+				channel: "screen",
 				type: "candidate", 
 				candidate: event.candidate 
 		   })); 
@@ -137,6 +130,7 @@ function doStartShareScreen() {
 	// create an offer 
 	localConn.createOffer(function (offer) { 
 		ws.send(JSON.stringify({ 
+			channel: "screen",
 			type: "offer", 
 			offer: offer 
 		})); 
@@ -150,6 +144,7 @@ function doStartShareScreen() {
 
 function doStopShareScreen() {
    ws.send(JSON.stringify({
+		channel: "screen",
 		type: "leave" 
    }));  
 }
@@ -165,6 +160,7 @@ function wsHandleOffer(offer) {
 		remoteConn.setLocalDescription(answer); 
 
 		ws.send(JSON.stringify({ 
+			channel: "screen",
 			type: "answer", 
 			answer: answer 
 		})); 
@@ -224,7 +220,8 @@ function gotMediaStream(stream) {
 }
 
 function doStopShareMedia() {
-   xs.send(JSON.stringify({
+   ws.send(JSON.stringify({
+		channel: "media",
 		type: "leave" 
    }));  
 }
@@ -253,7 +250,8 @@ function doInitMedia() {
 
 	 remoteMediaConn.onicecandidate = function (event) { 
 		if (event.candidate) { 
-		   xs.send(JSON.stringify({ 
+		   ws.send(JSON.stringify({ 
+				channel: "media",
 				type: "candidate", 
 				candidate: event.candidate 
 		   })); 
@@ -280,7 +278,8 @@ function doStartShareMedia(){
 
 	// create an offer 
 	localMediaConn.createOffer(function (offer) { 
-		xs.send(JSON.stringify({ 
+		ws.send(JSON.stringify({ 
+			channel: "media",
 			type: "offer", 
 			offer: offer 
 		})); 
@@ -301,8 +300,8 @@ function xsHandleOffer(offer) {
    remoteMediaConn.createAnswer(function (answer) { 
 		console.log(JSON.stringify('MediaConn Answer ' + answer));
 		remoteMediaConn.setLocalDescription(answer); 
-
-		xs.send(JSON.stringify({ 
+		ws.send(JSON.stringify({ 
+			channel: "media",
 			type: "answer", 
 			answer: answer 
 		})); 
@@ -338,12 +337,18 @@ function xsHandleLeave() {
 }
 
 ////////////////////////////////////////////////////////////////////
+var pcConfig = {
+  'iceServers': [{
+    'urls': 'stun:stun.l.google.com:19302'
+  }]
+};
+/*
 if (location.hostname !== 'localhost') {
   requestTurn(
     'https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913'
   );
 }
-
+*/
 function requestTurn(turnURL) {
 	var turnExists = false;
 	for (var i in pcConfig.iceServers) {

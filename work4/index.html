@@ -4,7 +4,8 @@
 		<title>Share Screen Demo</title>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-		<script src="/socket.io/socket.io.js"></script>
+		<!-- <script src="/socket.io/socket.io.js"></script> -->
+		<script src='../../../node_modules/socket.io-client/dist/socket.io.js'></script>
 		<script src="js/master.js"></script>
 		<link rel="stylesheet" href="css/master.css" />
 	</head>
@@ -62,7 +63,7 @@
 			var cursor = $('#cursor');
 			var displaySurface = $('#displaySurface');
 			var logicalSurface = $('#logicalSurface');
-
+			
 			if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
 				var error = 'Your browser does NOT supports getDisplayMedia API.';
 				$('h1').html(error);
@@ -72,7 +73,7 @@
 				$('#btn-test-getDisplayMedia').css({display: 'none'});
 				throw new Error(error);
 			}
-
+			
 		})
 	});
 </script>
