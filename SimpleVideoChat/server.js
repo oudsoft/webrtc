@@ -4,9 +4,9 @@ const WebSocketServer = require('ws').Server,
   app = express(),
   fs = require('fs');
 
-const pkey = fs.readFileSync('./ssl/key.pem'),
-  pcert = fs.readFileSync('./ssl/cert.pem'),
-  options = {key: pkey, cert: pcert, passphrase: '123456789'};
+const pkey = fs.readFileSync('./ssl/server.pem'),
+  pcert = fs.readFileSync('./ssl/server.crt'),
+  options = {key: pkey, cert: pcert, passphrase: ''};
 var wss = null, sslSrv = null;
  
 // use express static to deliver resources HTML, CSS, JS, etc)
