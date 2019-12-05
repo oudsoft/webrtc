@@ -19,7 +19,6 @@ var io = socketIO.listen(app);
 
 io.sockets.on('connection', function(socket) {
 
-	log('ok');
   function log() {
     var array = ['Message from server:'];
     array.push.apply(array, arguments);
