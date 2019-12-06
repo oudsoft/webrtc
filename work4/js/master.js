@@ -1,5 +1,5 @@
 //master.js
-var ws = new WebSocket('wss://10.1.105.37:8085/socket');
+var ws = new WebSocket('wss://192.168.43.192:8085/socket');
 
 ws.onopen = function () {
 	console.log('websocket is connected to the signaling server')
@@ -8,8 +8,8 @@ ws.onopen = function () {
 ws.onmessage = function (msg) {
 	console.log("WS Got message", msg.data);
 	if ((msg.data !== '') && (msg.data !== 'Hello world')) {
-	   var data = JSON.parse(msg.data); 
-	   switch(data.channel) { 
+		var data = JSON.parse(msg.data); 
+		switch(data.channel) { 
 		case "screen":
 		   switch(data.type) { 
 			//when somebody wants to call us 
@@ -52,7 +52,7 @@ ws.onmessage = function (msg) {
 		break;
 		default: 
 		break; 
-	}
+		}
      }
 }
 
@@ -246,7 +246,9 @@ function doInitMedia() {
 	 
 	 localMediaConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
+		console.log('Local ICE state change event: ', event);
+		console.log('localMediaConn.iceConnectionState: ' + localMediaConn.iceConnectionState);
+		localMediaConn = peerConnection;
 	 };
 
 	 remoteMediaConn = new RTCPeerConnection(configuration); 
@@ -263,16 +265,20 @@ function doInitMedia() {
 
  	 remoteMediaConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
+		console.log('Remote ICE state change event: ', event);
+		console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
+		remoteMediaConn = peerConnection;
 	 };
 
-	remoteMediaConn.onaddstream = function(event) {
-		const stream = event.stream;
+	remoteMediaConn.ontrack = function(event) {
+		const stream = event.streams[0];
+		console.log('Remote MediaConn ontrack event: ', event);
 		remoteMediaVideo.srcObject = stream;
 		remoteMediaStream = stream;
 	};
 
-	localMediaConn.addStream(localMediaStream); 
+	//localMediaConn.addStream(localMediaStream); 
+	localMediaStream.getTracks().forEach(track => localMediaConn.addTrack(track, localMediaStream));
 }
 
 function doStartShareMedia(){
@@ -301,7 +307,7 @@ function xsHandleOffer(offer) {
 	
    //create an answer to an offer 
    remoteMediaConn.createAnswer(function (answer) { 
-		console.log(JSON.stringify(answer));
+		console.log('Client\'s Answer with message' + JSON.stringify(answer));
 		remoteMediaConn.setLocalDescription(answer); 
 
 		ws.send(JSON.stringify({ 
@@ -391,8 +397,8 @@ function doTest() {
 
 	ws.send(JSON.stringify({ 
 		channel: "media",
-		type: "offer", 
-		offer: {offer: 'test'} 
+		type: "test", 
+		test: {test: 'test', channel: 'media'} 
 	})); 
 	
 }

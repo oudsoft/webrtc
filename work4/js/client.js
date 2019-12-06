@@ -1,5 +1,5 @@
 //client.js
-var ws = new WebSocket('wss://10.1.105.37:8085/socket');
+var ws = new WebSocket('wss://192.168.43.192:8085/socket');
 
 ws.onopen = function () {
 	console.log('websocket is connected to the signaling server')
@@ -199,9 +199,9 @@ function wsHandleLeave() {
 
 //* Media Section *//
 
-var localMediaConn; 
+//var localMediaConn; 
 var remoteMediaConn;
-
+/*
 function doGetLocalMedia() {
 	navigator.mediaDevices.getUserMedia({
 		audio: true,
@@ -218,7 +218,7 @@ function gotMediaStream(stream) {
 	localMediaStream = stream;
 	localMediaVideo.srcObject = stream;
 }
-
+*/
 function doStopShareMedia() {
    ws.send(JSON.stringify({
 		channel: "media",
@@ -242,7 +242,9 @@ function doInitMedia() {
 	 
 	 localMediaConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
+		console.log('Local ICE state change event: ', event);
+		console.log('localMediaConn.iceConnectionState: ' + localMediaConn.iceConnectionState);
+		localMediaConn = peerConnection;
 	 };
 	
 	*/
@@ -260,11 +262,14 @@ function doInitMedia() {
 
  	 remoteMediaConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
+		console.log('Remote ICE state change event: ', event);
+		console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
+		remoteMediaConn = peerConnection;
 	 };
 
-	remoteMediaConn.onaddstream = function(event) {
-		const stream = event.stream;
+	remoteMediaConn.ontrack = function(event) {
+		const stream = event.streams[0];
+		console.log('Remote MediaConn ontrack event: ', event);
 		remoteMediaVideo.srcObject = stream;
 		remoteMediaStream = stream;
 	};
@@ -277,6 +282,7 @@ function doStartShareMedia(){
 	doInitMedia();
 
 	// create an offer 
+	/*
 	localMediaConn.createOffer(function (offer) { 
 		ws.send(JSON.stringify({ 
 			channel: "media",
@@ -289,7 +295,7 @@ function doStartShareMedia(){
 	}, function (error) { 
 		alert("XSError when creating an offer"); 
 	});
-
+	*/
 }
 
 //when somebody sends us an offer 
@@ -298,7 +304,7 @@ function xsHandleOffer(offer) {
 	
    //create an answer to an offer 
    remoteMediaConn.createAnswer(function (answer) { 
-		console.log(JSON.stringify('MediaConn Answer ' + answer));
+		console.log('Client\'s Answer with message' + JSON.stringify(answer));
 		remoteMediaConn.setLocalDescription(answer); 
 		ws.send(JSON.stringify({ 
 			channel: "media",
@@ -307,14 +313,14 @@ function xsHandleOffer(offer) {
 		})); 
 		
    }, function (error) { 
-		console.log(JSON.stringify(error));
-		alert("XSError when creating an answer"); 
+		console.log('Media Creaate Answer Error: ' + JSON.stringify(error));
    }); 
 }
 
 //when we got an answer from a remote user
 function xsHandleAnswer(answer) { 
-   //remoteMediaConn.setRemoteDescription(new RTCSessionDescription(answer)); 
+	console.log('The Answer from Remote: ' + JSON.stringify(answer));
+   //remoteMediaConn.setLocalDescription(new RTCSessionDescription(answer)); 
 };
   
 //when we got an ice candidate from a remote user 
