@@ -1,0 +1,30 @@
+Today TODO
+Work Line
+
+1. ทบทวน STUN TURN ICE
+	NAT (Network Address Translators)
+
+	STUN (Session Traversal Utilities for NAT)
+	TURN (Traversal Using Relays around NAT)
+	ICE (Interactive Connectivity Establishment)
+
+	Traversal = การข้ามผ่าน ในที่นี้คือการข้ามผ่าน NAT และ Firewall
+
+2. ลองใช้ค่า server=null ในตอนสร้าง Peer
+3. ทดสอบหาค่า localStream/remoteStream ในหน้า master
+4. หาสถานะของ Peer ก่อน AddIceCandidate เพื่อแก้ DOMError 
+
+5. หาวิธีจัดการกับ Multi-Peer / Multi-Client
+	5.1 ทดสอบให้ฝ่าย Client Call ไปหา Master
+	5.2 เช็ครายลพเอียดจาก Example แบบ Multi Peer
+
+6. Copy All from "work4" dir. to new "work5" dir.
+	6.1 ปรับปรุง server.js มาใช้ express แบบใน SimpleVideoChat
+	6.2 on master page only use for all local (เอา remote ทั้งหมดออก)
+	6.3 ปรับปรุงฟังก์ชั่น เปิด/ปิด
+	6.4 เอาขึ้น 147.50.3.117
+	6.5 ทำความเข้าใจแบบ step by step อีกครั้ง ดูว่าว่าเหลืออะไร(ที่สำคัญและจำเป็น) กี่อย่าง
+	6.6 ประยุกต์การใช้งาน multi peer ด้วย Array
+		https://stackoverflow.com/questions/29071360/multi-peer-connection-in-webrtc
+		https://www.codeproject.com/Questions/1252725/How-do-I-add-multiple-peer-connections-webrtc
+		https://bloggeek.me/webrtc-rtcpeerconnection-one-per-stream/

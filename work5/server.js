@@ -1,43 +1,43 @@
-var os = require('os');
-var fs = require('fs');
-var nodeStatic = require('node-static');
-var socketIO = require('socket.io');
-var fileServer = new(nodeStatic.Server)();
+const os = require('os');
+const fs = require('fs');
 /*
-		วิธีสร้าง key
-		https://arit.rmutsv.ac.th/th/blogs/1-%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87-self-signed-ssl-certificate-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%97%E0%B8%94%E0%B8%A5%E0%B8%AD%E0%B8%87%E0%B8%AB%E0%B8%A3%E0%B8%B7%E0%B8%AD%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%A0%E0%B8%B2%E0%B8%A2%E0%B9%83%E0%B8%99%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B9%8C%E0%B8%81%E0%B8%A3-413
-		local IP
-		192.168.43.192
-		192.168.43.1
+const nodeStatic = require('node-static');
+const socketIO = require('socket.io');
+const fileServer = new(nodeStatic.Server)();
 */
-var privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
-var certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
+const https = require('https');
+const express = require('express');
+const app = express();
 
-var credentials = { key: privateKey, cert: certificate };
 
-var https = require('https');
+const serverPort = 443;
+const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
+const certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
 
-const serverPort = 8085;
+const credentials = { key: privateKey, cert: certificate /* , passphrase: '' */ };
 
-var httpsServer = https.createServer(credentials, function(req, res) {
-	//console.log('Example app listening on port ' + serverPort + '!')
-	res.setHeader('Access-Control-Allow-Origin', '*');
-	res.setHeader('Access-Control-Request-Method', '*');
-	res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
-	res.setHeader('Access-Control-Allow-Headers', '*');
-	if ( req.method === 'OPTIONS' ) {
-		res.writeHead(200);
-		res.end();
-		return;
+app.use(express.static('public'));
+app.use(function(req, res, next) {
+	if(req.headers['x-forwarded-proto']==='http') {
+		res.setHeader('Access-Control-Allow-Origin', '*');
+		res.setHeader('Access-Control-Request-Method', '*');
+		res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
+		res.setHeader('Access-Control-Allow-Headers', '*');
+		if ( req.method === 'OPTIONS' ) {
+			res.writeHead(200);
+			res.end();
+			return;
+		}
+		return res.redirect(['https://', req.get('Host'), req.url].join(''));
 	}
+	next();
+});
 
-	fileServer.serve(req, res);
-}).listen(serverPort);
-
+const httpsServer = https.createServer(credentials, app).listen(serverPort);
 
 /* WS */
-var WebSocketServer = require('ws').Server;
-var wss = new WebSocketServer({server: httpsServer, path: '/socket'});
+const WebSocketServer = require('ws').Server;
+const wss = new WebSocketServer({server: httpsServer, path: '/socket'});  
 
 wss.getUniqueID = function () {
     function s4() {
@@ -49,6 +49,14 @@ wss.getUniqueID = function () {
 wss.on('connection', function (ws, req) {
 	ws.id = wss.getUniqueID();
 	console.log('Client ID: ' + ws.id /*JSON.stringify(ws)*/);
+
+	let clients = wss.clients;
+	clients.forEach(function each(client) {
+		if (client.readyState === 1 ) {
+			client.send(JSON.stringify({ type: "newclient", id: ws.id}));
+		}
+	});
+
 	/*
 	const parameters = url.parse(req.url, true);
 	ws.uid = wss.getUniqueID();

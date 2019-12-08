@@ -1,73 +1,81 @@
 //master.js
 const myname = 'master';
 
-var hostname = window.location.hostname;
-var ws = new WebSocket('wss://' + hostname + ':8085/socket');
+const hostname = window.location.hostname;
+var ws = null;
 
-ws.onopen = function () {
-	console.log('websocket is connected to the signaling server')
-}
+function doConnect() {
+	ws = new WebSocket('wss://' + hostname + '/socket');
+	ws.onopen = function () {
+		console.log('Websocket is connected to the signaling server')
+	}
 
-ws.onmessage = function (msg) {
-	console.log("WS Got message", msg.data);
-	if ((msg.data !== '') && (msg.data !== 'Hello world')) {
-		var data = JSON.parse(msg.data); 
-		$(statsBox).append('<p>' + JSON.stringify(data) + '</p>');
-		switch(data.channel) { 
-		case "screen":
-			switch(data.type) { 
-			//when somebody wants to call us 
-			case "offer": 
-				wsHandleOffer(data.offer, data.sender); 
-				break; 
-			case "answer": 
-				wsHandleAnswer(data.answer, data.sender); 
-				break; 
-			//when a remote peer sends an ice candidate to us 
-			case "candidate": 
-				wsHandleCandidate(data.candidate, data.sender); 
-				break; 
-			case "start": 
-				wsHandleStart(data.start, data.sender); 
-				break; 
-			case "leave": 
-				wsHandleLeave(data.sender); 
-				break; 
-			default: 
-				break; 
-		   }
-		break;
-		case "media":
-		   switch(data.type) { 
-			//when somebody wants to call us 
-			case "offer": 
-				xsHandleOffer(data.offer, data.sender); 
-				break; 
-			case "answer": 
-				xsHandleAnswer(data.answer, data.sender); 
-				break; 
-			//when a remote peer sends an ice candidate to us 
-			case "candidate": 
-				xsHandleCandidate(data.candidate, data.sender); 
-				break; 
-			case "start": 
-				xsHandleStart(data.start, data.sender); 
-				break; 
-			case "leave": 
-				xsHandleLeave(data.sender); 
-				break; 
-			default: 
-				break; 
-		  }
-		break;
-		default: 
-		break; 
+	ws.onmessage = function (msg) {
+		console.log("WS Got message", msg.data);
+		if ((msg.data !== '') && (msg.data !== 'Hello world')) {
+			var data = JSON.parse(msg.data); 
+			if (data.type !== 'newclient')	{
+				$(statsBox).append('<p>' + JSON.stringify(data) + '</p>');
+				switch(data.channel) { 
+					case "screen":
+						switch(data.type) { 
+							//when somebody wants to call us 
+							case "offer": 
+								wsHandleOffer(data.offer, data.sender); 
+							break; 
+							case "answer": 
+								wsHandleAnswer(data.answer, data.sender); 
+							break; 
+							//when a remote peer sends an ice candidate to us 
+							case "candidate": 
+								wsHandleCandidate(data.candidate, data.sender); 
+							break; 
+							case "start": 
+								wsHandleStart(data.start, data.sender); 
+							break; 
+							case "leave": 
+								wsHandleLeave(data.sender); 
+							break; 
+							default: 
+							break; 
+						}
+					break;
+					case "media":
+						switch(data.type) { 
+							//when somebody wants to call us 
+							case "offer": 
+								xsHandleOffer(data.offer, data.sender); 
+							break; 
+							case "answer": 
+								xsHandleAnswer(data.answer, data.sender); 
+							break; 
+							//when a remote peer sends an ice candidate to us 
+							case "candidate": 
+								xsHandleCandidate(data.candidate, data.sender); 
+							break; 
+							case "start": 
+								xsHandleStart(data.start, data.sender); 
+							break; 
+							case "leave": 
+								xsHandleLeave(data.sender); 
+							break; 
+							default: 
+							break; 
+						}
+					break;
+					default: 
+					break; 
+				}
+			} else {
+				//newclient - connect
+				$(statsBox).append('<p>You have new client id: ' + data.id + ' connected</p>');
+			}
 		}
-     }
-}
+	}
 
-ws.onerror = function (err) { 
-   console.log("WS Got error", err); 
+	ws.onerror = function (err) { 
+	   console.log("WS Got error", err); 
+	}
 }
 
  const configuration = { 
@@ -80,11 +88,8 @@ const offerOptions = {
 };
 
 var localConn; 
-var remoteConn;
 
 var localMediaConn; 
-var remoteMediaConn;
-
 
 //* Screen Section *//
 
@@ -105,45 +110,21 @@ function doInitStream() {
 		} 
 	 };
 	 
-	 localConn.oniceconnectionstatechange = function(event) {
+	localConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
 		console.log('ICE state change event: ', event);
-	 };
-
-	 remoteConn = new RTCPeerConnection(configuration); 
-
-	 remoteConn.onicecandidate = function (event) { 
-		if (event.candidate) { 
-		   ws.send(JSON.stringify({ 
-				channel: "screen",
-				type: "candidate", 
-				candidate: event.candidate,
-				sender: 'remote',
-				name: myname
-		   })); 
-		} 
-	 };
-
- 	 remoteConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
-	 };
-
-	remoteConn.onaddstream = function(event) {
-		remoteStream = event.stream;
-		remoteVideo.srcObject = remoteStream;
 	};
 
-	localConn.addStream(localStream); 
-
-	//localConn.createOffer(offerOptions).then(createdOffer).catch(setSessionDescriptionError);
-
+	localStream.getTracks().forEach(track => localConn.addTrack(track, localStream));
 }
 
 //initiating a call 
 function doStartShareScreen() {
 	
 	doInitStream();
+
+	/* Step 1, 2, 3 */
+	// create an offer 
 
 	// create an offer 
 	localConn.createOffer(function (offer) { 
@@ -170,38 +151,21 @@ function doStopShareScreen() {
    	ws.send(JSON.stringify({
 		channel: "screen",
 		type: "leave",
+		sender: 'local',
 		name: myname
    	}));  
 }
 
 //when somebody sends us an offer 
 function wsHandleOffer(offer, sender) {
-	if (sender === 'local'){
-
-	   remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
-		
-	   //create an answer to an offer 
-	   remoteConn.createAnswer(function (answer) { 
-			console.log(JSON.stringify(answer));
-			remoteConn.setLocalDescription(answer); 
-			ws.send(JSON.stringify({ 
-				channel: "screen",
-				type: "answer", 
-				answer: answer,
-				sender: 'remote',
-				name: myname
-			})); 
-			
-	   }, function (error) { 
-			console.log(JSON.stringify(error));
-			alert("Error when creating an answer"); 
-	   });
-	}
+	/* Step 4, 5, 6, 7 */ 
+	/* These steps will be show detail on client side. */
 }
 
 //when we got an answer from a remote user
 var wsHandChecked = false;
 function wsHandleAnswer(answer, sender) { 
+	/* Step 8 */
 	if ((sender === 'remote') /*&& (!xsHandChecked)*/){
 	   localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
 			function() {$(statsBox).append('<p>localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
@@ -218,11 +182,6 @@ function wsHandleCandidate(candidate, sender) {
 			function() {$(statsBox).append('<p>localConn AddIceCandidate success.</p>');},
 			function(error) {$(errorBox).append('<p>localConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
 		);
-	} else if (sender === 'local') {
-		remoteConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
-			function() {$(statsBox).append('<p>remoteConn AddIceCandidate success.</p>');},
-			function(error) {$(errorBox).append('<p>remoteConn Failed to add Ice Candidate:' + error.toString() + '</p>');}
-		);
 	}
 };
 
@@ -234,15 +193,12 @@ function wsHandleStart(start, sender) {
 
 function wsHandleLeave(sender) {
 	localVideo.srcObject = null; 
-	remoteVideo.srcObject = null; 
 	
 	localConn.close(); 
 	localConn.onicecandidate = null; 
 	localConn.onaddstream = null; 
-
-	remoteConn.close(); 
-	remoteConn.onicecandidate = null; 
-	remoteConn.onaddstream = null; 
+	
+	ws.close();
 }
 
 ////////////////////////////////////////////////////
@@ -273,6 +229,7 @@ function doStopShareMedia() {
    	ws.send(JSON.stringify({
 		channel: "media",
 		type: "leave",
+		sender: 'local',
 		name: myname
    	}));  
 }
@@ -298,37 +255,8 @@ function doInitMedia() {
 		const peerConnection = event.target;
 		console.log('Local ICE state change event: ', event);
 		console.log('localMediaConn.iceConnectionState: ' + localMediaConn.iceConnectionState);
-		//localMediaConn = peerConnection;
 	 };
 
-	 remoteMediaConn = new RTCPeerConnection(configuration); 
-
-	 remoteMediaConn.onicecandidate = function (event) { 
-		if (event.candidate) { 
-		   ws.send(JSON.stringify({ 
-				channel: "media",
-				type: "candidate", 
-				candidate: event.candidate,
-				sender: 'remote',
-				name: myname
-		   })); 
-		} 
-	 };
-
- 	 remoteMediaConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
-		console.log('Remote ICE state change event: ', event);
-		console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
-		remoteMediaConn = peerConnection;
-	 };
-
-	remoteMediaConn.ontrack = function(event) {
-		remoteMediaStream = event.streams[0];
-		console.log('Remote MediaConn ontrack event: ', event);
-		remoteMediaVideo.srcObject = remoteMediaStream;
-	};
-
-	//localMediaConn.addStream(localMediaStream); 
 	localMediaStream.getTracks().forEach(track => localMediaConn.addTrack(track, localMediaStream));
 }
 
@@ -351,34 +279,12 @@ function doStartShareMedia(){
 	}, function (error) { 
 		alert("XSError when creating an offer"); 
 	});
-
 }
 
 //when somebody sends us an offer 
 function xsHandleOffer(offer, sender) {
-	/* Step 4, 5, 6, 7 */
-	if (sender === 'local'){
-
-		remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
-		
-		//create an answer to an offer 
-		remoteMediaConn.createAnswer(function (answer) { 
-			console.log('Client\'s Answer with message' + JSON.stringify(answer));
-			remoteMediaConn.setLocalDescription(answer); 
-
-			ws.send(JSON.stringify({ 
-				channel: "media",
-				type: "answer", 
-				answer: answer,
-				sender: 'remote',
-				name: myname
-			})); 
-			
-		}, function (error) { 
-			console.log(JSON.stringify(error));
-			alert("XSError when creating an answer"); 
-		}); 
-	}
+	/* Step 4, 5, 6, 7 */ 
+	/* These steps will be show detail on client side. */
 }
 
 //when we got an answer from a remote user
@@ -402,11 +308,6 @@ function xsHandleCandidate(candidate, sender) {
 			function() {$(statsBox).append('<p>localMediaConn AddIceCandidate success.</p>');},
 			function(error) {$(errorBox).append('<p>localMediaConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
 		);
-	} else if (sender === 'local') {
-		remoteMediaConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
-			function() {$(statsBox).append('<p>remoteMediaConn AddIceCandidate success.</p>');},
-			function(error) {$(errorBox).append('<p>remoteMediaConn Failed to add Ice Candidate:' + error.toString() + '</p>');}
-		);
 	}
 };
 
@@ -418,57 +319,15 @@ function xsHandleStart(start, sender) {
 
 function xsHandleLeave(sender) {
 	localMediaVideo.srcObject = null; 
-	remoteMediaVideo.srcObject = null; 
 	
 	localMediaConn.close(); 
 	localMediaConn.onicecandidate = null; 
 	localMediaConn.onaddstream = null; 
 
-	remoteMediaConn.close(); 
-	remoteMediaConn.onicecandidate = null; 
-	remoteMediaConn.onaddstream = null; 
-}
-
-
-////////////////////////////////////////////////////////////////////
-/*
-if (location.hostname !== 'localhost') {
-  requestTurn(
-    'https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913'
-  );
-}
-*/
-function requestTurn(turnURL) {
-	var turnExists = false;
-	for (var i in configuration.iceServers) {
-		if (configuration.iceServers[i].urls.substr(0, 5) === 'turn:') {
-			turnExists = true;
-			turnReady = true;
-			break;
-		}
-	}
-	if (!turnExists) {
-		console.log('Getting TURN server from ', turnURL);
-		// No TURN server. Get one from computeengineondemand.appspot.com:
-		var xhr = new XMLHttpRequest();
-		xhr.onreadystatechange = function() {
-			if (xhr.readyState === 4 && xhr.status === 200) {
-				var turnServer = JSON.parse(xhr.responseText);
-				console.log('Got TURN server: ', turnServer);
-				configuration.iceServers.push({
-					'urls': 'turn:' + turnServer.username + '@' + turnServer.turn,
-					'credential': turnServer.password
-				});
-				turnReady = true;
-			}
-		};
-		xhr.open('GET', turnURL, true);
-		xhr.send();
-	}
+	ws.close();
 }
 
 ///////////////////////////////////////////////////////
-//var socket = io.connect();
 
 function doTest() {
 	//socket.emit('message', {message: 'test'});
@@ -485,6 +344,7 @@ function doTest() {
 
 function doCheckRemoteMediaConnState(){
 //window.setInterval(function() {
+	/*
 	if (remoteMediaConn){
 
 		remoteMediaConn.getStats(null).then(stats => {
@@ -506,6 +366,6 @@ function doCheckRemoteMediaConnState(){
 
 		document.querySelector(".stats-box").innerHTML = statsOutput;
 		});
-	}
+	} */
 //}, 1000);
 }

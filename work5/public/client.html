@@ -4,8 +4,7 @@
 		<title>Share Screen Demo</title>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-		<!-- <script src="/socket.io/socket.io.js"></script> -->
-		<script src='../../../node_modules/socket.io-client/dist/socket.io.js'></script>
+		<script src='lib/socket.io.js'></script>
 		<script src="js/client.js"></script>
 		<link rel="stylesheet" href="css/client.css" />
 	</head>
@@ -20,13 +19,13 @@
 			</div>
 			
 			<div>&nbsp;</div>
+			<div id="Connection-Control">
+				<button id="btn-connect-server" onclick="doConnect()">Start Connect</button>
+				<button id="btn-stop-screen-call" onclick="doDisconnect()">Stop Connect</button>
+			</div>
 			<div id="Screen-Remote-Control">
 				<button id="btn-start-screen-call" onclick="doStartShareScreen()">Call Stream</button>
-				<button id="btn-stop-screen-call" onclick="doStopShareScreen()">Stop Stream</button>
-			</div>
-			<div id="Media-Remote-Control">
 				<button id="btn-start-media-call" onclick="doStartShareMedia()">Call Media</button>
-				<button id="btn-stop-media-call" onclick="doStopShareMedia()">Stop Media</button>
 			</div>
 		</div>
 	</body>
@@ -43,20 +42,14 @@
 
 	var localMediaStream;
 	var remoteMediaStream;
-	/*
-	$(document).ready(function() {
-		doInitStream();
-		doInitMedia();
-	});
-	*/
 
 	function doStartShareScreen() {
-		doInitStream();
+		//doInitStream();
 		doCallStream();
 	}
 
 	function doStartShareMedia() {
-		doInitMedia();
+		//doInitMedia();
 		doCallMedia();
 	}
 </script>
