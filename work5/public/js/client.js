@@ -1,13 +1,14 @@
 //client.js
 const myname = 'client';
+const roomname = 'socket';
 
 const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + '/socket');
+	ws = new WebSocket('wss://' + hostname + '/' + roomname);
 	ws.onopen = function () {
-		console.log('Websocket is connected to the signaling server')
+		console.log('Websocket is connected to the signaling server');
 	}
 
 	ws.onmessage = function (msg) {
@@ -55,6 +56,18 @@ function doConnect() {
 					break; 
 			  }
 			break;
+			case "chat":
+				switch(data.type) {
+				case "register": 
+					handleRegister(data);
+				break;
+				case "message": 
+					handleMessage(data.message);
+				break;
+				default: 
+					break; 
+				}
+			break;
 			default: 
 			break; 
 			}
@@ -67,6 +80,7 @@ function doConnect() {
 
 	doInitStream();
 	doInitMedia();
+	doReadySystem();
 }
 
  //using Google public stun server 
@@ -146,6 +160,7 @@ function doStartShareScreen() {
 function doDisconnect() {
 	doStopShareScreen();
 	doStopShareMedia();
+	doInitSystem();
 }
 
 function doStopShareScreen() {

@@ -1,11 +1,12 @@
 //master.js
 const myname = 'master';
+const roomname = 'socket';
 
 const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + '/socket');
+	ws = new WebSocket('wss://' + hostname + '/' + roomname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server')
 	}
@@ -63,6 +64,18 @@ function doConnect() {
 							break; 
 						}
 					break;
+					case "chat":
+						switch(data.type) {
+						case "register": 
+							handleRegister(data);
+						break;
+						case "message": 
+							handleMessage(data.message);
+						break;
+						default: 
+							break; 
+						}
+					break;
 					default: 
 					break; 
 				}
@@ -76,6 +89,8 @@ function doConnect() {
 	ws.onerror = function (err) { 
 	   console.log("WS Got error", err); 
 	}
+
+	doReadyGetStream();
 }
 
  const configuration = { 
@@ -154,6 +169,8 @@ function doStopShareScreen() {
 		sender: 'local',
 		name: myname
    	}));  
+
+	doInitSystem();
 }
 
 //when somebody sends us an offer 
@@ -220,6 +237,7 @@ function gotMediaStream(stream) {
 	console.log('Adding local media stream.');
 	localMediaStream = stream;
 	localMediaVideo.srcObject = stream;
+	doReadyShareMedia();
 }
 
 function doStopShareMedia() {
@@ -232,6 +250,8 @@ function doStopShareMedia() {
 		sender: 'local',
 		name: myname
    	}));  
+
+	doInitSystem();
 }
 
 function doInitMedia() {

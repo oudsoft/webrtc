@@ -5,14 +5,15 @@
 	/* height: 300px; */
 }
 #clientScreen {
-	/* border: 3px solid red; */
+	border: 3px solid red;
 	/* position: absolute; */
 	margin-right: 10px;
 	left: 5px;
 	top: 5px;
 	bottom: 5px;
 	/* right: 30%; */
-	width: 500px;
+	width: 65%;
+	display: inline-block;
 }
 video {
 	width: 100%;
@@ -26,7 +27,7 @@ video {
 	/*border: 3px solid green; */
 }
 #remoteScreenVideo { 
-	width: 500px; 
+	width: 100%; 
 	z-index: 0;
 	/* height: 500px; */
 }
@@ -34,9 +35,84 @@ video {
 #remoteMediaVideo { 
 	/*background-color: rgba(0,0,0,0.5);*/
 	z-index: 2;
-	width: 150px; 
-	height: 100px;
+	width: 300px; 
+	height: 200px;
 	position: absolute; 
 	bottom: 4px; 
 	right: 4px; 
+}
+
+/* Chat Area*/
+#ChatScreen {
+	width: 30%;
+	/* position: absolute; */
+	/* float: left; */
+	display: inline-block;
+}
+#MessageScreen {
+	position: relative;
+	border: 3px solid green;
+	width: 100%;
+	height: 420px;
+	top: 0px;
+	background-color: rgba(0,0,0,0.5);
+	overflow: auto;
+	color: white;
+}
+#ClientProfile {
+	background-color: rgba(255,255,0,0.5);
+	border-radius: 50%;
+	width: 50px; 
+	height: 50px;
+	border: 3px solid blue; 
+	text-align: center;
+	line-height: 16px;
+	vertical-align: middle;
+	display: none;
+}
+#ChatInput{
+
+}
+#usermessage{
+	height: 40px;
+}
+#sendcommand{
+	height: 40px;
+}
+.FrameMessage {
+	display: block;
+	width: 100%;
+	height: fit-content;
+	position: relative;
+	float: left;
+	/* border: 2px solid red; */
+}
+.SelfMessage {
+	/* text-align: right; */
+	float: right;
+	padding: 5px;
+	border: 1px solid green;
+	background-color: rgba(0, 255, 0, 0.75);
+	border-radius: 10px;
+	width: fit-content; 
+	height: fit-content;
+}
+.OtherMessage {
+	/*text-align: left; */
+	/*float: left;*/
+	clear: right;
+	padding: 5px;
+	border: 1px solid blue;
+	background-color: rgba(0, 0, 255, 0.75);
+	border-radius: 10px;
+	width: fit-content; 
+	height: fit-content;
+}
+.SenderMessage{
+	font-size: 10px;
+	color: black;
+	display: block;
+	position: relative;
+	left: 4px;
+	top: -10px;
 }

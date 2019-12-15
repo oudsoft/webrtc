@@ -1,14 +1,8 @@
 const os = require('os');
 const fs = require('fs');
-/*
-const nodeStatic = require('node-static');
-const socketIO = require('socket.io');
-const fileServer = new(nodeStatic.Server)();
-*/
 const https = require('https');
 const express = require('express');
 const app = express();
-
 
 const serverPort = 443;
 const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
@@ -36,8 +30,16 @@ app.use(function(req, res, next) {
 const httpsServer = https.createServer(credentials, app).listen(serverPort);
 
 /* WS */
+const roomname = 'socket';
+
 const WebSocketServer = require('ws').Server;
-const wss = new WebSocketServer({server: httpsServer, path: '/socket'});  
+const wss = new WebSocketServer({server: httpsServer, path: '/' + roomname});  
+
+/* Chat*/
+/* Rooms*/
+const rooms = [];
+const newChatRoom = {roomName: roomname, users: [], messages: []};
+rooms.push(newChatRoom);
 
 wss.getUniqueID = function () {
     function s4() {
@@ -46,9 +48,17 @@ wss.getUniqueID = function () {
     return s4() + s4() + '-' + s4();
 };
 
+wss.getNextClientNo = function () {
+	let countClient = wss.clients.size;
+	return padZero((countClient), 2)
+};
+
 wss.on('connection', function (ws, req) {
 	ws.id = wss.getUniqueID();
+	let yourNo = wss.getNextClientNo();
 	console.log('Client ID: ' + ws.id /*JSON.stringify(ws)*/);
+	console.log('YourNo: ' + yourNo);
+	ws.send(JSON.stringify({channel: 'chat', type: 'register', clientId: ws.id, clientNo: yourNo}));
 
 	let clients = wss.clients;
 	clients.forEach(function each(client) {
@@ -146,6 +156,46 @@ wss.on('connection', function (ws, req) {
 				});
             break;
 			
+			case "message":
+				console.log("WS Sending message to:",data.name); 
+				console.log("message: ", JSON.stringify(data.message));	
+				if (data.sendto === 'all') {
+					// save message to message of room
+					// ...
+					/*
+						room >> user >> messages
+						roomname
+						messages
+							message {sendat, type, sendfrom, sendto, msg}
+
+						users
+							user {clientId/id, name}
+					*/
+					/*
+					onClientConnect
+						1. clientRegister
+							serverCreate clientId and send to new Client
+							serverSend Annount newClientConnect to All Client's Connected
+								Master register NewClient with new Peer and save to Peers Array
+								Master start Offer for new Peer
+						2. 
+					onClientDisconnect
+						1. clientUnRegister
+					*/
+					getRoomByName(data.message.roomName).then(function(room) {
+						room.messages.push(data.message);
+						wss.clients.forEach(function each(client) {
+							client.send(JSON.stringify({channel: 'chat', type: 'message', message: data.message}));
+						});
+					});
+				} else {
+					let sendto = wss.clients.filter(function(client){ return client.id==data.sendto;});
+					if (sendto) {
+						sendto.send(JSON.stringify({channel: 'chat', type: 'message', message: data.message}));
+					}
+				}
+			break;
+
 			default: 
 				wss.clients.forEach(function each(client) {
 					//if (client !== ws && client.readyState === 1) {
@@ -158,3 +208,23 @@ wss.on('connection', function (ws, req) {
 	});
 });
 
+/* Utility */
+function padZero(num, size) {
+    var s = num+"";
+    while (s.length < size) s = "0" + s;
+    return s;
+}
+
+function getRoomByName(roomName) {
+	return new Promise(function(resolve, reject) {
+		var result = rooms.filter(function(item, inx) {
+			if(roomName === item.roomName){return (item); }
+		});
+		//console.log('The Result:=> ' + JSON.stringify(result));
+		if (result.length > 0){
+			resolve(result[0]);
+		}else {
+			resolve({});
+		}
+	});
+}
