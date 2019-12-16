@@ -4,7 +4,7 @@ const https = require('https');
 const express = require('express');
 const app = express();
 
-const serverPort = 443;
+const serverPort = 4432;
 const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
 const certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
 

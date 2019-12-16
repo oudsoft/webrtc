@@ -6,13 +6,13 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4432/' + roomname);
+	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server')
 	}
 
 	ws.onmessage = function (msg) {
-		console.log("WS Got message", msg.data);
+		//console.log("WS Got message", msg.data);
 		if ((msg.data !== '') && (msg.data !== 'Hello world')) {
 			var data = JSON.parse(msg.data); 
 			if (data.type !== 'newclient')	{
@@ -25,17 +25,17 @@ function doConnect() {
 								wsHandleOffer(data.offer, data.sender); 
 							break; 
 							case "answer": 
-								wsHandleAnswer(data.answer, data.sender); 
+								wsHandleAnswer(data.answer, data.sender, data.clientId); 
 							break; 
 							//when a remote peer sends an ice candidate to us 
 							case "candidate": 
-								wsHandleCandidate(data.candidate, data.sender); 
+								wsHandleCandidate(data.candidate, data.sender, data.clientId); 
 							break; 
 							case "start": 
-								wsHandleStart(data.start, data.sender); 
+								wsHandleStart(data.start, data.sender, data.clientId); 
 							break; 
 							case "leave": 
-								wsHandleLeave(data.sender); 
+								wsHandleLeave(data.sender, data.clientId); 
 							break; 
 							default: 
 							break; 
@@ -48,17 +48,17 @@ function doConnect() {
 								xsHandleOffer(data.offer, data.sender); 
 							break; 
 							case "answer": 
-								xsHandleAnswer(data.answer, data.sender); 
+								xsHandleAnswer(data.answer, data.sender, data.clientId); 
 							break; 
 							//when a remote peer sends an ice candidate to us 
 							case "candidate": 
-								xsHandleCandidate(data.candidate, data.sender); 
+								xsHandleCandidate(data.candidate, data.sender, data.clientId); 
 							break; 
 							case "start": 
-								xsHandleStart(data.start, data.sender); 
+								xsHandleStart(data.start, data.sender, data.clientId); 
 							break; 
 							case "leave": 
-								xsHandleLeave(data.sender); 
+								xsHandleLeave(data.sender, data.clientId); 
 							break; 
 							default: 
 							break; 
@@ -80,8 +80,13 @@ function doConnect() {
 					break; 
 				}
 			} else {
+				//clientId = data.clientId;
 				//newclient - connect
-				$(statsBox).append('<p>You have new client id: ' + data.id + ' connected</p>');
+				$(statsBox).append('<p>You have new client id: ' + data.clientId + ' connected</p>');
+				/* Step 1, 2, 3 */
+				// create an offer 
+				doInitStream(data.clientId);
+				doInitMedia(data.clientId);
 			}
 		}
 	}
@@ -102,61 +107,74 @@ const offerOptions = {
 	offerToReceiveAudio: 1
 };
 
-var localConn; 
-
-var localMediaConn; 
+//var localConn; 
+var localPeers = [];
+//var localMediaConn; 
+var localMediaPeers = [];
 
 //* Screen Section *//
 
-function doInitStream() {
+function doInitStream(clientId) {
 		
-	 localConn = new RTCPeerConnection(configuration); 
+	let localConn = new RTCPeerConnection(configuration); 
 		
-	 // Setup ice handling 
-	 localConn.onicecandidate = function (event) { 
+	// Setup ice handling 
+	localConn.onicecandidate = function (event) { 
 		if (event.candidate) { 
 		   ws.send(JSON.stringify({ 
 				channel: "screen",
 				type: "candidate", 
 				candidate: event.candidate,
 				sender: 'local',
-				name: myname					
+				name: myname,
+				clientId: clientId					
 		   })); 
 		} 
-	 };
+	};
 	 
 	localConn.oniceconnectionstatechange = function(event) {
 		const peerConnection = event.target;
 		console.log('ICE state change event: ', event);
+		setLocalConnById(this.clientId, peerConnection).then(function(localConn) {
+			//
+		});
 	};
 
 	localStream.getTracks().forEach(track => localConn.addTrack(track, localStream));
+
+	localPeers.push({localConn: localConn, clientId: clientId});
 }
 
 //initiating a call 
 function doStartShareScreen() {
 	
-	doInitStream();
+	//doInitStream();
 
 	/* Step 1, 2, 3 */
 	// create an offer 
 
-	// create an offer 
-	localConn.createOffer(function (offer) { 
+	for (let i=0; i<localPeers.length; i++){
+		delay(2000).then(function() {
+			let localConn = localPeers[i].localConn;
+			let peerId = localPeers[i].clientId;
+			if (clientId !== peerId )	{
+				localConn.createOffer(function (offer) { 
+					localConn.setLocalDescription(offer); 
+					ws.send(JSON.stringify({ 
+						channel: "screen",
+						type: "offer", 
+						offer: offer ,
+						sender: 'local',
+						name: myname,
+						peerId: peerId
+					})); 
 
-		localConn.setLocalDescription(offer); 
-
-		ws.send(JSON.stringify({ 
-			channel: "screen",
-			type: "offer", 
-			offer: offer ,
-			sender: 'local',
-			name: myname
-		})); 
-
-	}, function (error) { 
-		alert("WSError when creating an offer"); 
-	});
+				}, function (error) { 
+					alert("WSError when creating an offer"); 
+				});
+			}
+		});
+	}
 }
 
 function doStopShareScreen() {
@@ -180,35 +198,45 @@ function wsHandleOffer(offer, sender) {
 }
 
 //when we got an answer from a remote user
-var wsHandChecked = false;
-function wsHandleAnswer(answer, sender) { 
+
+function wsHandleAnswer(answer, sender, clientId) { 
 	/* Step 8 */
-	if ((sender === 'remote') /*&& (!xsHandChecked)*/){
-	   localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
-			function() {$(statsBox).append('<p>localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
-			function(error) {$(errorBox).append('<p>localConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
-		);
+	console.log('this.clientId=> ' + this.clientId);
+	console.log('clientId=> ' + clientId);
+	if ((sender === 'remote') && (this.clientId !== clientId)){
+		getLocalConnById(clientId).then(function(localConn) {
+			if (localConn){
+			   	localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
+					function() {$(statsBox).append('<p>localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
+					function(error) {$(errorBox).append('<p>localConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
+				);
+		   	}
+		});
 	}
 };
   
 //when we got an ice candidate from a remote user 
-function wsHandleCandidate(candidate, sender) { 
-	console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
+function wsHandleCandidate(candidate, sender, AClientId) { 
+	//console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
 	if (sender === 'remote') {
-		localConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
-			function() {$(statsBox).append('<p>localConn AddIceCandidate success.</p>');},
-			function(error) {$(errorBox).append('<p>localConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
-		);
+		getLocalConnById(AClientId).then(function(localConn) {
+			if (localConn){			
+				localConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
+					function() {$(statsBox).append('<p>localConn AddIceCandidate success.</p>');},
+					function(error) {$(errorBox).append('<p>localConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
+				);
+			}
+		});
 	}
 };
 
-function wsHandleStart(start, sender) {
+function wsHandleStart(start, sender, clientId) {
 	if (sender==='remote') {
 		doStartShareScreen();
 	}
 }
 
-function wsHandleLeave(sender) {
+function wsHandleLeave(sender, clientId) {
 	localVideo.srcObject = null; 
 	
 	localConn.close(); 
@@ -218,6 +246,36 @@ function wsHandleLeave(sender) {
 	ws.close();
 }
 
+function getLocalConnById(clientId) {
+	return new Promise(function(resolve, reject) {
+		//console.log('clientId:=> ' + clientId);
+		//console.log('All Local Peers:=> ' + JSON.stringify(localPeers));
+		var result = localPeers.filter(function(item, inx) {
+			if(clientId === item.clientId){return (item); }
+		});
+		//console.log('The Result:=> ' + JSON.stringify(result));
+		if (result.length > 0){
+			resolve(result[0].localConn);
+		}else {
+			resolve(null);
+		}
+	});
+}
+
+function setLocalConnById(clientId, conn) {
+	return new Promise(function(resolve, reject) {
+		var result = localPeers.filter(function(item, inx) {
+			if(clientId === item.clientId){return (item); }
+		});
+		//console.log('The Result:=> ' + JSON.stringify(result));
+		if (result.length > 0){
+			result[0].localConn = conn;
+			resolve(result[0].localConn);
+		}else {
+			resolve(null);
+		}
+	});
+}
 ////////////////////////////////////////////////////
 
 //* Media Section *//
@@ -254,19 +312,20 @@ function doStopShareMedia() {
 	doInitSystem();
 }
 
-function doInitMedia() {
+function doInitMedia(clientId) {
 		
-	 localMediaConn = new RTCPeerConnection(configuration); 
+	let localMediaConn = new RTCPeerConnection(configuration); 
 		
 	 // Setup ice handling 
-	 localMediaConn.onicecandidate = function (event) { 
+	localMediaConn.onicecandidate = function (event) { 
 		if (event.candidate) { 
 		   ws.send(JSON.stringify({ 
 				channel: "media",
 				type: "candidate", 
 				candidate: event.candidate,
 				sender: 'local',
-				name: myname
+				name: myname,
+				clientId: clientId
 		   })); 
 		} 
 	 };
@@ -278,27 +337,37 @@ function doInitMedia() {
 	 };
 
 	localMediaStream.getTracks().forEach(track => localMediaConn.addTrack(track, localMediaStream));
+
+	localMediaPeers.push({localMediaConn: localMediaConn, clientId: clientId})
 }
 
 function doStartShareMedia(){
 	
-	doInitMedia();
+	//doInitMedia();
 	/* Step 1, 2, 3 */
 	// create an offer 
-	localMediaConn.createOffer(function (offer) { 
-		localMediaConn.setLocalDescription(offer); 
-		
-		ws.send(JSON.stringify({ 
-			channel: "media",
-			type: "offer", 
-			offer: offer,
-			sender: 'local',
-			name: myname
-		})); 
+	for (let i=0; i<localMediaPeers.length; i++){
+		delay(2000).then(function() {
+			let localMediaConn = localMediaPeers[i].localMediaConn;
+			let peerId = localPeers[i].clientId;
+			if (clientId !== peerId )	{
+				localMediaConn.createOffer(function (offer) { 
+					localMediaConn.setLocalDescription(offer); 
+					ws.send(JSON.stringify({ 
+						channel: "media",
+						type: "offer", 
+						offer: offer,
+						sender: 'local',
+						name: myname,
+						peerId: peerId
+					})); 
 
-	}, function (error) { 
-		alert("XSError when creating an offer"); 
-	});
+				}, function (error) { 
+					alert("XSError when creating an offer"); 
+				});
+			}
+		});
+	}
 }
 
 //when somebody sends us an offer 
@@ -310,34 +379,43 @@ function xsHandleOffer(offer, sender) {
 //when we got an answer from a remote user
 /* Step 8 */
 var xsHandChecked = false;
-function xsHandleAnswer(answer, sender) { 
-	//console.log('sender=> ' + sender);
+function xsHandleAnswer(answer, sender, clientId) { 
+	console.log('this.clientId=> ' + this.clientId);
+	console.log('clientId=> ' + clientId);
 	if ((sender === 'remote') /*&& (!xsHandChecked)*/){
-	   localMediaConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
-			function() {$(statsBox).append('<p>localMediaConn setRemoteDescription success.</p>'); xsHandChecked = true;},
-			function(error) {$(errorBox).append('<p>localMediaConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
-		);
+		getLocalMediaConnById(clientId).then(function(localMediaConn) {
+			if (localMediaConn) {
+			   	localMediaConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
+					function() {$(statsBox).append('<p>localMediaConn setRemoteDescription success.</p>'); xsHandChecked = true;},
+					function(error) {$(errorBox).append('<p>localMediaConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
+				);
+		   	}
+		});
 	}
 };
   
 //when we got an ice candidate from a remote user 
-function xsHandleCandidate(candidate, sender) { 
-	console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
+function xsHandleCandidate(candidate, sender, clientId) { 
+	//console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
 	if (sender === 'remote') {
-		localMediaConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
-			function() {$(statsBox).append('<p>localMediaConn AddIceCandidate success.</p>');},
-			function(error) {$(errorBox).append('<p>localMediaConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
-		);
+		getLocalMediaConnById(clientId).then(function(localMediaConn) {	
+			if (localMediaConn) {			
+				localMediaConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
+					function() {$(statsBox).append('<p>localMediaConn AddIceCandidate success.</p>');},
+					function(error) {$(errorBox).append('<p>localMediaConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
+				);
+			}
+		});
 	}
 };
 
-function xsHandleStart(start, sender) {
+function xsHandleStart(start, sender, clientId) {
 	if (sender==='remote') {
 		doStartShareMedia();
 	}
 }
 
-function xsHandleLeave(sender) {
+function xsHandleLeave(sender, clientId) {
 	localMediaVideo.srcObject = null; 
 	
 	localMediaConn.close(); 
@@ -345,6 +423,20 @@ function xsHandleLeave(sender) {
 	localMediaConn.onaddstream = null; 
 
 	ws.close();
+}
+
+function getLocalMediaConnById(clientId) {
+	return new Promise(function(resolve, reject) {
+		var result = localMediaPeers.filter(function(item, inx) {
+			if(clientId === item.clientId){return (item); }
+		});
+		//console.log('The Result:=> ' + JSON.stringify(result));
+		if (result.length > 0){
+			resolve(result[0].localMediaConn);
+		}else {
+			resolve(null);
+		}
+	});
 }
 
 ///////////////////////////////////////////////////////

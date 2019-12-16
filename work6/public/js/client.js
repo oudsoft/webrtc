@@ -6,70 +6,74 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4432/' + roomname);
+	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server');
 	}
 
 	ws.onmessage = function (msg) {
-		console.log("WS Got message", msg.data);
+		//console.log("WS Got message", msg.data);
 		if ((msg.data !== '') && (msg.data !== 'Hello world')) {
 		   var data = JSON.parse(msg.data); 
-		   switch(data.channel) { 
-			case "screen":
-			   switch(data.type) { 
-				//when somebody wants to call us 
-				case "offer": 
-					wsHandleOffer(data.offer); 
-					break; 
-				case "answer": 
-					wsHandleAnswer(data.answer); 
-					break; 
-				//when a remote peer sends an ice candidate to us 
-				case "candidate": 
-					wsHandleCandidate(data.candidate); 
-					break; 
-				case "leave": 
-					wsHandleLeave(); 
-					break; 
-				default: 
-					break; 
-			   }
-			break;
-			case "media":
-			   switch(data.type) { 
-				//when somebody wants to call us 
-				case "offer": 
-					xsHandleOffer(data.offer, data.sender); 
-					break; 
-				case "answer": 
-					xsHandleAnswer(data.answer, data.sender); 
-					break; 
-				//when a remote peer sends an ice candidate to us 
-				case "candidate": 
-					xsHandleCandidate(data.candidate, data.sender); 
-					break; 
-				case "leave": 
-					xsHandleLeave(data.sender); 
-					break; 
-				default: 
-					break; 
-			  }
-			break;
-			case "chat":
-				switch(data.type) {
-				case "register": 
-					handleRegister(data);
+			if (data.type !== 'newclient')	{
+				switch(data.channel) { 
+				case "screen":
+				   switch(data.type) { 
+					//when somebody wants to call us 
+					case "offer": 
+						wsHandleOffer(data.offer, data.sender, data.peerId); 
+						break; 
+					case "answer": 
+						wsHandleAnswer(data.answer); 
+						break; 
+					//when a remote peer sends an ice candidate to us 
+					case "candidate": 
+						wsHandleCandidate(data.candidate); 
+						break; 
+					case "leave": 
+						wsHandleLeave(); 
+						break; 
+					default: 
+						break; 
+				   }
 				break;
-				case "message": 
-					handleMessage(data.message);
+				case "media":
+				   switch(data.type) { 
+					//when somebody wants to call us 
+					case "offer": 
+						xsHandleOffer(data.offer, data.sender, data.peerId); 
+						break; 
+					case "answer": 
+						xsHandleAnswer(data.answer, data.sender); 
+						break; 
+					//when a remote peer sends an ice candidate to us 
+					case "candidate": 
+						xsHandleCandidate(data.candidate, data.sender); 
+						break; 
+					case "leave": 
+						xsHandleLeave(data.sender); 
+						break; 
+					default: 
+						break; 
+				   }
+				break;
+				case "chat":
+					switch(data.type) {
+					case "register": 
+						handleRegister(data);
+					break;
+					case "message": 
+						handleMessage(data.message);
+					break;
+					default: 
+						break; 
+					}
 				break;
 				default: 
-					break; 
+				break; 
 				}
-			break;
-			default: 
-			break; 
+			} else {
+				clientId = data.clientId;
 			}
 		}
 	}
@@ -96,7 +100,6 @@ const offerOptions = {
 
 //* Screen Section *//
 
-var localConn; 
 var remoteConn;
 
 function doCallStream() {
@@ -126,8 +129,9 @@ function doInitStream() {
 	};
 
  	remoteConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
 		console.log('ICE state change event: ', event);
+		const peerConnection = event.target;
+		remoteConn = peerConnection;
 	};
 
 	remoteConn.onaddstream = function(event) {
@@ -174,26 +178,31 @@ function doStopShareScreen() {
 }
 
 //when somebody sends us an offer 
-function wsHandleOffer(offer) {
-	remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
-	
-	//create an answer to an offer 
-	remoteConn.createAnswer(function (answer) { 
-		console.log(JSON.stringify(answer));
-		remoteConn.setLocalDescription(answer); 
-
-		ws.send(JSON.stringify({ 
-			channel: "screen",
-			type: "answer", 
-			answer: answer,
-			sender: 'remote',
-			name: myname
-		})); 
+function wsHandleOffer(offer, sender, peerId) {
+	console.log('clientId:=> ' + clientId );
+	console.log('peerId:=> ' + peerId);
+	//if (clientId === peerId)	{
+		remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
 		
-	}, function (error) { 
-		console.log(JSON.stringify(error));
-		alert("Error when creating an answer"); 
-	}); 
+		//create an answer to an offer 
+		remoteConn.createAnswer(function (answer) { 
+			console.log(JSON.stringify(answer));
+			remoteConn.setLocalDescription(answer); 
+
+			ws.send(JSON.stringify({ 
+				channel: "screen",
+				type: "answer", 
+				answer: answer,
+				sender: 'remote',
+				name: myname,
+				clientId: clientId
+			})); 
+			
+		}, function (error) { 
+			console.log(JSON.stringify(error));
+			alert("Error when creating an answer"); 
+		}); 
+	//}
 }
 
 //when we got an answer from a remote user
@@ -258,9 +267,9 @@ function doInitMedia() {
 	 };
 
  	 remoteMediaConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
 		console.log('Remote ICE state change event: ', event);
-		console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
+		const peerConnection = event.target;
+		//console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
 		remoteMediaConn = peerConnection;
 	 };
 
@@ -277,24 +286,27 @@ function doStartShareMedia(){
 }
 
 //when somebody sends us an offer 
-function xsHandleOffer(offer, sender) {
-   remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
-	
-   //create an answer to an offer 
-   remoteMediaConn.createAnswer(function (answer) { 
-		console.log('Client\'s Answer with message' + JSON.stringify(answer));
-		remoteMediaConn.setLocalDescription(answer); 
-		ws.send(JSON.stringify({ 
-			channel: "media",
-			type: "answer", 
-			answer: answer,
-			sender: 'remote',
-			name: myname
-		})); 
+function xsHandleOffer(offer, sender, peerId) {
+	//if (clientId === peerId)	{
+		remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
 		
-   }, function (error) { 
-		console.log('Media Creaate Answer Error: ' + JSON.stringify(error));
-   }); 
+		//create an answer to an offer 
+		remoteMediaConn.createAnswer(function (answer) { 
+			console.log('Client\'s Answer with message' + JSON.stringify(answer));
+			remoteMediaConn.setLocalDescription(answer); 
+			ws.send(JSON.stringify({ 
+				channel: "media",
+				type: "answer", 
+				answer: answer,
+				sender: 'remote',
+				name: myname,
+				clientId: clientId
+			})); 
+			
+	   }, function (error) { 
+			console.log('Media Creaate Answer Error: ' + JSON.stringify(error));
+	   }); 
+	//}
 }
 
 //when we got an answer from a remote user
