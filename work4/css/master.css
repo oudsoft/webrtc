@@ -1,0 +1,41 @@
+/* client.css */
+#Main {
+	border: 3px solid blue;
+	position: relative;
+	/* height: 300px; */
+}
+#localScreen {
+	border: 3px solid red;
+	position: relative;
+	margin-right: 10px;
+	left: 5px;
+	top: 5px;
+	bottom: 5px;
+	/*right: 30%; */
+	width: 66%;
+	padding: 5px;
+}
+#remoteScreen {
+	border: 3px solid green;
+	position: absolute;
+	right: 5px;
+	top: 5px;
+	bottom: 5px;
+	/* left: 70%; */
+	margin-left: 10px;
+	width: 30%;
+	padding: 5px;
+}
+video {
+	width: 50%;
+	border-radius: 5px;
+	border: 1px solid black;
+}
+.error-box {
+	position: relative;
+	color: red;
+}
+.stats-box {
+	position: relative;
+	color: blue;
+}

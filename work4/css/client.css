@@ -1,0 +1,42 @@
+/* client.css */
+#Main {
+	border: 3px solid blue;
+	position: relative;
+	/* height: 300px; */
+}
+#clientScreen {
+	/* border: 3px solid red; */
+	/* position: absolute; */
+	margin-right: 10px;
+	left: 5px;
+	top: 5px;
+	bottom: 5px;
+	/* right: 30%; */
+	width: 500px;
+}
+video {
+	width: 100%;
+	/*
+	border-radius: 5px;
+	border: 1px solid black;
+	*/
+}
+#Client-Area {
+	position: relative;
+	/*border: 3px solid green; */
+}
+#remoteScreenVideo { 
+	width: 500px; 
+	z-index: 0;
+	/* height: 500px; */
+}
+
+#remoteMediaVideo { 
+	/*background-color: rgba(0,0,0,0.5);*/
+	z-index: 2;
+	width: 150px; 
+	height: 100px;
+	position: absolute; 
+	bottom: 4px; 
+	right: 4px; 
+}

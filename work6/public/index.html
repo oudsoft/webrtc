@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Share Screen Demo</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src='lib/socket.io.js'></script>
+		<script src="js/master.js"></script>
+		<script src="js/utility.js"></script>
+		<link rel="stylesheet" href="css/master.css" />
+	</head>
+	<body>
+		<h1>Master Screen</h1>
+		<div id="Main">
+			<button id="btn-connect-server" onclick="doConnect()">Start Connect</button>
+			<div id="localScreen">
+				<h2>Local Screen</h2>
+			    <video id="localVideo" controls autoplay playsinline muted="false" volume="0"></video>
+				<div id="control-local-screen"></div>
+				<div>&nbsp;</div>
+				<button id="btn-get-Stream" onclick="doGetScreenSignal()">Get Screen Signal</button>
+				<button id="btn-start-share" onclick="doStartShareScreen()">Start Share Screen</button>
+				<button id="btn-stop-share" onclick="doStopShareScreen()">Stop Share Screen</button>
+			</div>
+			<div id="remoteScreen">
+				<h2>Local Media (Camera)</h2>
+				<video id="localMediaVideo" autoplay playsinline></video>
+				<div>&nbsp;</div>
+				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
+				<button id="btn-start-shareLocalMedia" onclick="doStartShareMedia()">Start Share Local Media</button>
+				<button id="btn-stop-shareLocalMedia" onclick="doStopShareMedia()">Stop Share Local Media</button>
+				<div>&nbsp;</div>
+				<button id="btn-test-call" onclick="doTest()">Test Call</button>
+			</div>
+			<div id="ChatScreen">
+				<div id="ClientProfile"></div>
+				<div id="MessageScreen">
+					<h2 style="text-align: center;">วิธีใช้งาน(จอมาสเตอร์)</h2>
+					<p>1. คลิกปุ่ม <b>Start Connect</b> เพื่อเริ่มเชื่อมต่อระบบ</p>
+					<p><b>การส่งข้อความ</b></p>
+					<p>2. ระบบจะสร้างหมายเลขผู้ใช้งานให้คุณ เช่น 01, 02, 03, ... ในกรอบสีเหลืองด้านบนซ้ายของกล่องข้อความนี้</p>
+					<p>3. พิมพ์ข้อความที่ต้องการส่ง แล้วคลิกปุ่ม<b>  ส่ง </b>หรือ กดปุ่ม <b>Enter</b> บนคีย์บอร์ด</p>
+					<p><b>การสร้างสัญญาณสตรีมมิ่งจอ</b></p>
+					<p>4. คลิกปุ่ม <b>Get Screen Signal</b> เพื่อเลือกแหล่งหน้าจอ</p>
+					<p>5. คลิกปุ่ม <b>Start Share Screen</b> เพื่อเริ่มแชร์สัญญาณจอไปยังไคลเอ็นต์</p>
+					<p>6. คลิกปุ่ม <b>Stop Share Screen</b>เพื่อยุติการแชร์สัญญาณจอไปให้ไคลเอ็นต์</p>
+					<p><b>การสร้างสัญญาณมีเดียร์</b></p>
+					<p>7. คลิกปุ่ม <b>Get Local Media</b> เพื่อสร้างสัญญาณมีเดียร์จาก Web Cam และไมโครโฟนของเครื่องคุณ</p>
+					<p>8. คลิกปุ่ม <b>Start Share Local Media</b> เพื่อเริ่มแชร์สัญญาณมีเดียร์ไปยังไคลเอ็นต์</p>
+					<p>9. คลิกปุ่ม <b>Stop Share Local Media</b>เพื่อยุติการแชร์สัญญาณมีเดียร์ไปให้ไคลเอ็นต์</p>
+				</div>
+				<div>&nbsp;</div>
+				<div id="ChatInput">
+					<p style="font-weight: bold;">โปรดใช้คำสุภาพในข้อความที่ต้องการส่ง</p>
+					<input type="text" id="usermessage" size="30" placeholder="พิมพ์ข้อความ"/>
+					<input type="button" id="sendcommand" value=" ส่ง "/>
+					<p id="ErrorInputMessage" style="color: red;"></p>
+				</div>
+			</div>
+		</div>
+		<div class="error-box"></div>
+		<div class="stats-box"></div>
+	</body>
+</html>
+
+<script>
+	var localVideo = document.querySelector('#localVideo');
+
+	var localMediaVideo = document.querySelector('#localMediaVideo');
+
+	var localStream;
+
+	var localMediaStream;
+
+	var errorBox = $('.error-box');
+	var statsBox = $('.stats-box');
+
+	var msgScreen = document.querySelector('#MessageScreen');
+
+	var clientProfile = document.querySelector('#ClientProfile');
+
+	var clientId;
+	var clientNo;
+
+	$(document).ready(function() {
+		doInitSystem();
+
+		$('#control-local-screen').load('controllocal.html', function() {
+			var textarea = $('#capabilities');
+			var settings  = $('#settings');
+			var aspectRatio  = $('#aspectRatio');
+			var frameRate  = $('#frameRate');
+			var resolutions  = $('#resolutions');
+			var cursor = $('#cursor');
+			var displaySurface = $('#displaySurface');
+			var logicalSurface = $('#logicalSurface');
+			
+			if(!navigator.getDisplayMedia && !navigator.mediaDevices.getDisplayMedia) {
+				var error = 'Your browser does NOT supports getDisplayMedia API.';
+				$('h1').html(error);
+				$('h1').css('color', 'red');
+
+				$('video').css({display: 'none'});
+				$('#btn-test-getDisplayMedia').css({display: 'none'});
+				throw new Error(error);
+			}
+		});
+
+		$('#sendcommand').on('click', function(event) {
+				event.preventDefault();
+				doSendMessage();
+		});
+
+		$('#usermessage').on("keyup", function(event) {
+			if (event.keyCode === 13) {
+				event.preventDefault();
+				doSendMessage();
+			}
+		});
+	});
+
+	function doInitSystem(){
+		$('#btn-connect-server').prop( "disabled", false );
+		$('#btn-get-Stream').prop( "disabled", false );
+		$('#btn-start-share').prop( "disabled", true );
+		$('#btn-stop-share').prop( "disabled", true );
+
+		$('#btn-start-getLocalMedia').prop( "disabled", false );
+		$('#btn-start-shareLocalMedia').prop( "disabled", true );
+		$('#btn-stop-shareLocalMedia').prop( "disabled", true );
+
+		$('#usermessage').prop( "disabled", true );
+		$('#sendcommand').prop( "disabled", true );
+	}
+
+	function doReadyGetStream(){
+		$('#btn-connect-server').prop( "disabled", true );
+
+		$('#btn-get-Stream').prop( "disabled", false );
+		$('#btn-start-getLocalMedia').prop( "disabled", false );
+
+		$('#usermessage').prop( "disabled", false );
+		$('#sendcommand').prop( "disabled", false );
+		$('#MessageScreen').empty();
+	}
+
+	function doReadyShareStream(){
+		$('#btn-start-share').prop( "disabled", false );
+		$('#btn-stop-share').prop( "disabled", false );
+
+		$('#btn-get-Stream').prop( "disabled", true );
+	}
+
+	function doReadyShareMedia(){
+		$('#btn-start-shareLocalMedia').prop( "disabled", false );
+		$('#btn-stop-shareLocalMedia').prop( "disabled", false );
+
+		$('#btn-start-getLocalMedia').prop( "disabled", true );
+	}
+
+	function doSendMessage() {
+		var userMsg = $('#usermessage').val();
+		if (userMsg) {
+			var isRude = doCheckRude(userMsg);
+			if (!isRude) {
+			   ws.send(JSON.stringify({ 
+					channel: "chat",
+					type: "message", 
+					message: {msg: userMsg, timestamp: new Date(), clientname: myname, fromId: clientNo, toId: 'all', roomName: roomname},
+					name: myname,
+					sender: 'client',
+					sendto: 'all'
+			   })); 
+			   $('#usermessage').val('');
+			} else {
+				$('#ErrorInputMessage').empty();
+				$('#ErrorInputMessage').text('ข้อความที่คุณกำลังจะส่งมีคำไม่สุภาพประกอบอยู่ โปรดแก้ไขด้วย');
+				$('#usermessage').focus();
+			}
+
+		} else {
+			alert("โปรดพิมพ์ข้อความที่ต้องการส่ง");
+		}
+	}
+</script>
