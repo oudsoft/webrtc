@@ -30,3 +30,7 @@ Work Line
 		https://bloggeek.me/webrtc-rtcpeerconnection-one-per-stream/
 
 7. รับ-ส่ง ข้อความผ่าน Webseocket แบบ Chat
+
+8. หน้ากาก(Theme)ของบริการฟรี
+
+9. Signed-Self of myshopman.com with CloundFair.com

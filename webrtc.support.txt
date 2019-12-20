@@ -1,0 +1,30 @@
+
+webrtc
+---------------------------------------------------------------------------------------
+
+support http localhost only
+
+if use other ip/domain it can support on https
+
+https://hostadvice.com/how-to/how-to-install-a-self-signed-ssl-certificate-for-apache-on-ubuntu-18-04-server/
+
+sudo a2enmod ssl
+sudo a2ensite default-ssl.conf
+
+apachectl configtest
+
+sudo systemctl restart apache2
+sudo /etc/init.d/apache2 restart
+
+
+---------------------------------------------------------------------------------------
+How To Create Secure WebSocket With Node.JS "ws" Module
+
+https://blog.zackad.com/en/2017/08/19/create-websocket-with-nodejs.html
+https://stackoverflow.com/questions/6599470/node-js-socket-io-with-ssl
+
+/etc/letsencrypt/keys/0000_key-certbot.pem
+/etc/letsencrypt/csr/0000_csr-certbot.pem
+
+sudo cp /etc/letsencrypt/keys/0000_key-certbot.pem ssl-cert/0000_key-certbot.pem
+sudo cp /etc/letsencrypt/csr/0000_csr-certbot.pem ssl-cert/0000_csr-certbot.pem

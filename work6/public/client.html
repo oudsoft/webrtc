@@ -79,6 +79,9 @@
 	var clientId;
 	var clientNo;
 
+	var masterId;
+	var masterNo;
+
 	$(document).ready(function() {
 		doInitSystem();
 
@@ -106,8 +109,8 @@
 
 	function doReadySystem(){
 		$('#btn-connect-server').prop( "disabled", true );
-		$('#btn-start-screen-call').prop( "disabled", false );
-		$('#btn-start-media-call').prop( "disabled", false );
+		$('#btn-start-screen-call').prop( "disabled", true );
+		$('#btn-start-media-call').prop( "disabled", true );
 		$('#btn-stop-screen-call').prop( "disabled", false );
 		$('#usermessage').prop( "disabled", false );
 		$('#sendcommand').prop( "disabled", false );

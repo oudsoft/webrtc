@@ -168,7 +168,7 @@
 					type: "message", 
 					message: {msg: userMsg, timestamp: new Date(), clientname: myname, fromId: clientNo, toId: 'all', roomName: roomname},
 					name: myname,
-					sender: 'client',
+					sender: 'master',
 					sendto: 'all'
 			   })); 
 			   $('#usermessage').val('');
@@ -182,4 +182,15 @@
 			alert("โปรดพิมพ์ข้อความที่ต้องการส่ง");
 		}
 	}
+
+  window.onbeforeunload = function(event) {
+  	console.log('<<refresh window>>>');
+   	ws.send(JSON.stringify({ 
+			channel: "chat",
+			type: "refresh", 
+			name: myname,
+			sender: 'master',
+			sendto: 'all'
+   	})); 
+  };	
 </script>

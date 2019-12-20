@@ -6,7 +6,7 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname);
+	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server');
 	}
@@ -21,17 +21,17 @@ function doConnect() {
 				   switch(data.type) { 
 					//when somebody wants to call us 
 					case "offer": 
-						wsHandleOffer(data.offer, data.sender, data.peerId); 
+						wsHandleOffer(data.offer, data.sender); 
 						break; 
 					case "answer": 
-						wsHandleAnswer(data.answer); 
+						wsHandleAnswer(data.answer, data.sender); 
 						break; 
 					//when a remote peer sends an ice candidate to us 
 					case "candidate": 
-						wsHandleCandidate(data.candidate); 
+						wsHandleCandidate(data.candidate, data.sender); 
 						break; 
 					case "leave": 
-						wsHandleLeave(); 
+						wsHandleLeave(data.sender); 
 						break; 
 					default: 
 						break; 
@@ -41,7 +41,7 @@ function doConnect() {
 				   switch(data.type) { 
 					//when somebody wants to call us 
 					case "offer": 
-						xsHandleOffer(data.offer, data.sender, data.peerId); 
+						xsHandleOffer(data.offer, data.sender); 
 						break; 
 					case "answer": 
 						xsHandleAnswer(data.answer, data.sender); 
@@ -65,6 +65,9 @@ function doConnect() {
 					case "message": 
 						handleMessage(data.message);
 					break;
+					case "refresh": 
+						handleRefreshWindow();
+					break;
 					default: 
 						break; 
 					}
@@ -73,7 +76,7 @@ function doConnect() {
 				break; 
 				}
 			} else {
-				clientId = data.clientId;
+				//clientId = data.clientId;
 			}
 		}
 	}
@@ -124,6 +127,7 @@ function doInitStream() {
 				candidate: event.candidate,
 				name: myname,
 				sender: 'remote',
+				clientId: this.clientId
 		   })); 
 		} 
 	};
@@ -151,7 +155,10 @@ function doStartShareScreen() {
 		ws.send(JSON.stringify({ 
 			channel: "screen",
 			type: "offer", 
-			offer: offer 
+			offer: offer,
+			sender: 'remote',
+			name: myname,
+			clientId: clientId			
 		})); 
 
 		localConn.setLocalDescription(offer); 
@@ -178,15 +185,14 @@ function doStopShareScreen() {
 }
 
 //when somebody sends us an offer 
-function wsHandleOffer(offer, sender, peerId) {
+function wsHandleOffer(offer, sender) {
 	console.log('clientId:=> ' + clientId );
-	console.log('peerId:=> ' + peerId);
-	//if (clientId === peerId)	{
+	//if (clientId !== peerId)	{
 		remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
 		
 		//create an answer to an offer 
 		remoteConn.createAnswer(function (answer) { 
-			console.log(JSON.stringify(answer));
+			//console.log(JSON.stringify(answer));
 			remoteConn.setLocalDescription(answer); 
 
 			ws.send(JSON.stringify({ 
@@ -195,7 +201,7 @@ function wsHandleOffer(offer, sender, peerId) {
 				answer: answer,
 				sender: 'remote',
 				name: myname,
-				clientId: clientId
+				clientId: this.clientId,
 			})); 
 			
 		}, function (error) { 
@@ -261,7 +267,8 @@ function doInitMedia() {
 				type: "candidate", 
 				candidate: event.candidate,
 				sender: 'remote',
-				name: myname
+				name: myname,
+				clientId: this.clientId
 		   })); 
 		} 
 	 };
@@ -275,7 +282,7 @@ function doInitMedia() {
 
 	remoteMediaConn.ontrack = function(event) {
 		remoteMediaStream = event.streams[0];
-		console.log('Remote MediaConn ontrack event: ', event);
+		//console.log('Remote MediaConn ontrack event: ', event);
 		remoteMediaVideo.srcObject = remoteMediaStream;
 		event.track.onended = e => remoteMediaVideo.srcObject = remoteMediaVideo.srcObject;
 	};
@@ -286,13 +293,13 @@ function doStartShareMedia(){
 }
 
 //when somebody sends us an offer 
-function xsHandleOffer(offer, sender, peerId) {
-	//if (clientId === peerId)	{
+function xsHandleOffer(offer, sender) {
+	//if (clientId !== peerId)	{
 		remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
 		
 		//create an answer to an offer 
 		remoteMediaConn.createAnswer(function (answer) { 
-			console.log('Client\'s Answer with message' + JSON.stringify(answer));
+			//console.log('Client\'s Answer with message' + JSON.stringify(answer));
 			remoteMediaConn.setLocalDescription(answer); 
 			ws.send(JSON.stringify({ 
 				channel: "media",
@@ -300,7 +307,7 @@ function xsHandleOffer(offer, sender, peerId) {
 				answer: answer,
 				sender: 'remote',
 				name: myname,
-				clientId: clientId
+				clientId: this.clientId,
 			})); 
 			
 	   }, function (error) { 
@@ -311,13 +318,13 @@ function xsHandleOffer(offer, sender, peerId) {
 
 //when we got an answer from a remote user
 function xsHandleAnswer(answer, sender) { 
-	console.log('The Answer from Remote: ' + JSON.stringify(answer));
+	//console.log('The Answer from Remote: ' + JSON.stringify(answer));
    //remoteMediaConn.setLocalDescription(new RTCSessionDescription(answer)); 
 };
   
 //when we got an ice candidate from a remote user 
 function xsHandleCandidate(candidate, sender) { 
-	console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
+	//console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
 	if (sender === 'local') {
 		remoteMediaConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
 			function() {console.log('remoteMediaConn AddIceCandidate success.');},

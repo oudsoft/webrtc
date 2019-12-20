@@ -6,7 +6,7 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname);
+	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server')
 	}
@@ -15,8 +15,8 @@ function doConnect() {
 		//console.log("WS Got message", msg.data);
 		if ((msg.data !== '') && (msg.data !== 'Hello world')) {
 			var data = JSON.parse(msg.data); 
+			$(statsBox).append('<p>' + JSON.stringify(data) + '</p>');
 			if (data.type !== 'newclient')	{
-				$(statsBox).append('<p>' + JSON.stringify(data) + '</p>');
 				switch(data.channel) { 
 					case "screen":
 						switch(data.type) { 
@@ -80,9 +80,8 @@ function doConnect() {
 					break; 
 				}
 			} else {
-				//clientId = data.clientId;
 				//newclient - connect
-				$(statsBox).append('<p>You have new client id: ' + data.clientId + ' connected</p>');
+				$(statsBox).append('<p>You have new client id: ' + data.clientId + '<b>[' + data.clientNo + ']</b> connected</p>');
 				/* Step 1, 2, 3 */
 				// create an offer 
 				doInitStream(data.clientId);
@@ -115,34 +114,38 @@ var localMediaPeers = [];
 //* Screen Section *//
 
 function doInitStream(clientId) {
+	if (this.clientId !== clientId) {
 		
-	let localConn = new RTCPeerConnection(configuration); 
-		
-	// Setup ice handling 
-	localConn.onicecandidate = function (event) { 
-		if (event.candidate) { 
-		   ws.send(JSON.stringify({ 
-				channel: "screen",
-				type: "candidate", 
-				candidate: event.candidate,
-				sender: 'local',
-				name: myname,
-				clientId: clientId					
-		   })); 
-		} 
-	};
-	 
-	localConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
-		console.log('ICE state change event: ', event);
-		setLocalConnById(this.clientId, peerConnection).then(function(localConn) {
-			//
-		});
-	};
+		let localConn = new RTCPeerConnection(configuration); 
+			
+		// Setup ice handling 
+		localConn.onicecandidate = function (event) { 
+			if (event.candidate) { 
+			   ws.send(JSON.stringify({ 
+					channel: "screen",
+					type: "candidate", 
+					candidate: event.candidate,
+					sender: 'local',
+					name: myname,
+					clientId: clientId					
+			   })); 
+			} 
+		};
+		 
+		localConn.oniceconnectionstatechange = function(event) {
+			const peerConnection = event.target;
+			console.log('ICE state change event: ', event);
+			/*
+			setLocalConnById(this.clientId, peerConnection).then(function(localConn) {
+				//
+			});
+			*/
+		};
 
-	localStream.getTracks().forEach(track => localConn.addTrack(track, localStream));
+		localStream.getTracks().forEach(track => localConn.addTrack(track, localStream));
 
-	localPeers.push({localConn: localConn, clientId: clientId});
+		localPeers.push({localConn: localConn, clientId: clientId});
+	}
 }
 
 //initiating a call 
@@ -157,7 +160,7 @@ function doStartShareScreen() {
 		delay(2000).then(function() {
 			let localConn = localPeers[i].localConn;
 			let peerId = localPeers[i].clientId;
-			if (clientId !== peerId )	{
+			//if (clientId !== peerId )	{
 				localConn.createOffer(function (offer) { 
 					localConn.setLocalDescription(offer); 
 					ws.send(JSON.stringify({ 
@@ -166,13 +169,13 @@ function doStartShareScreen() {
 						offer: offer ,
 						sender: 'local',
 						name: myname,
-						peerId: peerId
+						clientId: peerId
 					})); 
 
 				}, function (error) { 
 					alert("WSError when creating an offer"); 
 				});
-			}
+			//}
 		});
 	}
 }
@@ -185,7 +188,8 @@ function doStopShareScreen() {
 		channel: "screen",
 		type: "leave",
 		sender: 'local',
-		name: myname
+		name: myname,
+		clientId: this.clientId,
    	}));  
 
 	doInitSystem();
@@ -198,19 +202,20 @@ function wsHandleOffer(offer, sender) {
 }
 
 //when we got an answer from a remote user
-
 function wsHandleAnswer(answer, sender, clientId) { 
 	/* Step 8 */
 	console.log('this.clientId=> ' + this.clientId);
 	console.log('clientId=> ' + clientId);
-	if ((sender === 'remote') && (this.clientId !== clientId)){
+	if ((sender === 'remote')){
+		console.log('All localPeers=> ' + JSON.stringify(localPeers));
 		getLocalConnById(clientId).then(function(localConn) {
 			if (localConn){
-			   	localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
+				console.log('localConn Found=> ' + JSON.stringify(localConn));
+				localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
 					function() {$(statsBox).append('<p>localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
 					function(error) {$(errorBox).append('<p>localConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
 				);
-		   	}
+		  }
 		});
 	}
 };
@@ -303,42 +308,44 @@ function doStopShareMedia() {
 	localMediaStream.getTracks()[1].stop();
 
    	ws.send(JSON.stringify({
-		channel: "media",
-		type: "leave",
-		sender: 'local',
-		name: myname
+			channel: "media",
+			type: "leave",
+			sender: 'local',
+			name: myname,
+			clientId: this.clientId
    	}));  
 
 	doInitSystem();
 }
 
 function doInitMedia(clientId) {
-		
-	let localMediaConn = new RTCPeerConnection(configuration); 
-		
-	 // Setup ice handling 
-	localMediaConn.onicecandidate = function (event) { 
-		if (event.candidate) { 
-		   ws.send(JSON.stringify({ 
-				channel: "media",
-				type: "candidate", 
-				candidate: event.candidate,
-				sender: 'local',
-				name: myname,
-				clientId: clientId
-		   })); 
-		} 
-	 };
-	 
-	 localMediaConn.oniceconnectionstatechange = function(event) {
-		const peerConnection = event.target;
-		console.log('Local ICE state change event: ', event);
-		console.log('localMediaConn.iceConnectionState: ' + localMediaConn.iceConnectionState);
-	 };
+	if (this.clientId !== clientId) {		
+		let localMediaConn = new RTCPeerConnection(configuration); 
+			
+		 // Setup ice handling 
+		localMediaConn.onicecandidate = function (event) { 
+			if (event.candidate) { 
+			  ws.send(JSON.stringify({ 
+					channel: "media",
+					type: "candidate", 
+					candidate: event.candidate,
+					sender: 'local',
+					name: myname,
+					clientId: this.clientId
+			  })); 
+			} 
+		};
+		 
+		localMediaConn.oniceconnectionstatechange = function(event) {
+			const peerConnection = event.target;
+			console.log('Local ICE state change event: ', event);
+			console.log('localMediaConn.iceConnectionState: ' + localMediaConn.iceConnectionState);
+		 };
 
-	localMediaStream.getTracks().forEach(track => localMediaConn.addTrack(track, localMediaStream));
+		localMediaStream.getTracks().forEach(track => localMediaConn.addTrack(track, localMediaStream));
 
-	localMediaPeers.push({localMediaConn: localMediaConn, clientId: clientId})
+		localMediaPeers.push({localMediaConn: localMediaConn, clientId: clientId});
+	}
 }
 
 function doStartShareMedia(){
@@ -350,7 +357,7 @@ function doStartShareMedia(){
 		delay(2000).then(function() {
 			let localMediaConn = localMediaPeers[i].localMediaConn;
 			let peerId = localPeers[i].clientId;
-			if (clientId !== peerId )	{
+			//if (clientId !== peerId )	{
 				localMediaConn.createOffer(function (offer) { 
 					localMediaConn.setLocalDescription(offer); 
 					ws.send(JSON.stringify({ 
@@ -359,13 +366,13 @@ function doStartShareMedia(){
 						offer: offer,
 						sender: 'local',
 						name: myname,
-						peerId: peerId
+						clientId: peerId
 					})); 
 
 				}, function (error) { 
 					alert("XSError when creating an offer"); 
 				});
-			}
+			//}
 		});
 	}
 }
@@ -378,18 +385,19 @@ function xsHandleOffer(offer, sender) {
 
 //when we got an answer from a remote user
 /* Step 8 */
-var xsHandChecked = false;
 function xsHandleAnswer(answer, sender, clientId) { 
 	console.log('this.clientId=> ' + this.clientId);
 	console.log('clientId=> ' + clientId);
-	if ((sender === 'remote') /*&& (!xsHandChecked)*/){
+	if ((sender === 'remote')){
+		console.log('All localPeers=> ' + JSON.stringify(localMediaPeers));
 		getLocalMediaConnById(clientId).then(function(localMediaConn) {
 			if (localMediaConn) {
-			   	localMediaConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
+				console.log('localConn Found=> ' + JSON.stringify(localMediaConn));
+				localMediaConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
 					function() {$(statsBox).append('<p>localMediaConn setRemoteDescription success.</p>'); xsHandChecked = true;},
 					function(error) {$(errorBox).append('<p>localMediaConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
 				);
-		   	}
+		  }
 		});
 	}
 };
