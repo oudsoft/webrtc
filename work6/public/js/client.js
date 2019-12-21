@@ -212,13 +212,14 @@ function wsHandleOffer(offer, sender) {
 }
 
 //when we got an answer from a remote user
-function wsHandleAnswer(answer) { 
+function wsHandleAnswer(answer, sender) { 
    //localConn.setRemoteDescription(new RTCSessionDescription(answer)); 
 };
   
 //when we got an ice candidate from a remote user 
-function wsHandleCandidate(candidate) { 
+function wsHandleCandidate(candidate, sender) { 
 	//console.log('event=> ' + JSON.stringify(candidate));
+	console.log('sender=> ' + sender);
 	remoteConn.addIceCandidate(new RTCIceCandidate(candidate)); 
 };
 

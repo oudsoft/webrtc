@@ -72,7 +72,7 @@ function doGetScreenSignal() {
         var _settings = screen.getTracks()[0].getSettings();
         $(settings).val('settings:\n\n' + JSON.stringify(_settings, null, '\t'));
         $(settings).css({display: 'block'});
-        delay(3000).then(() => {
+        delay(1500).then(() => {
             $(capabilities).css({display: 'none'});
             $(settings).css({display: 'none'});
         });
