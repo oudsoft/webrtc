@@ -6,7 +6,8 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
+	//ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
+	ws = new WebSocket('wss://' + hostname + '/' + roomname + '?type=' + myname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server');
 	}
@@ -111,15 +112,18 @@ function doCallStream() {
 		type: "start",
 		name: myname,
 		sender: 'remote',
-		start: {start: 'start', channel: 'screen', name: myname, id: ws.id, sender: 'remote'} 
+		start: {start: 'start', channel: 'screen', name: myname, id: ws.id, sender: 'remote'},
+		clientId: this.clientId
 	}));  
 }
 
 function doInitStream() {
 
 	remoteConn = new RTCPeerConnection(configuration); 
+	console.log("ICE gathering state of remoteConn: "  + remoteConn.iceGatheringState); 
 
 	remoteConn.onicecandidate = function (event) { 
+		console.log("ICE gathering state change: " + event.target.iceGatheringState);
 		if (event.candidate) { 
 		   ws.send(JSON.stringify({ 
 				channel: "screen",
@@ -132,17 +136,25 @@ function doInitStream() {
 		} 
 	};
 
+	console.log("ICE connection state: " + remoteConn.iceConnectionState); 
+
  	remoteConn.oniceconnectionstatechange = function(event) {
 		console.log('ICE state change event: ', event);
+		//console.log("ICE connection state change: " + event.target.iceConnectionState);
 		const peerConnection = event.target;
-		remoteConn = peerConnection;
+		const ref = peerConnection.iceConnectionState;
+		if (ref!== "closed" && ref !== "failed" && ref !== "disconnected" && ref !== "completed") {
+			remoteConn = peerConnection;
+		}
+	};
+	
+	remoteConn.ontrack = function(event) {
+		remoteStream = event.streams[0];
+		console.log('RemoteSteamConn ontrack event: ', event);
+		remoteVideo.srcObject = remoteStream;
+		event.track.onended = e => remoteVideo.srcObject = remoteVideo.srcObject;
 	};
 
-	remoteConn.onaddstream = function(event) {
-		const stream = event.stream;
-		remoteVideo.srcObject = stream;
-		remoteStream = stream;
-	};
 }
 
 //initiating a call 
@@ -187,28 +199,26 @@ function doStopShareScreen() {
 //when somebody sends us an offer 
 function wsHandleOffer(offer, sender) {
 	console.log('clientId:=> ' + clientId );
-	//if (clientId !== peerId)	{
-		remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
-		
-		//create an answer to an offer 
-		remoteConn.createAnswer(function (answer) { 
-			//console.log(JSON.stringify(answer));
-			remoteConn.setLocalDescription(answer); 
+	remoteConn.setRemoteDescription(new RTCSessionDescription(offer));
+	
+	//create an answer to an offer 
+	remoteConn.createAnswer(function (answer) { 
+		//console.log(JSON.stringify(answer));
+		remoteConn.setLocalDescription(answer); 
 
-			ws.send(JSON.stringify({ 
-				channel: "screen",
-				type: "answer", 
-				answer: answer,
-				sender: 'remote',
-				name: myname,
-				clientId: this.clientId,
-			})); 
-			
-		}, function (error) { 
-			console.log(JSON.stringify(error));
-			alert("Error when creating an answer"); 
-		}); 
-	//}
+		ws.send(JSON.stringify({ 
+			channel: "screen",
+			type: "answer", 
+			answer: answer,
+			sender: 'remote',
+			name: myname,
+			clientId: this.clientId,
+		})); 
+		
+	}, function (error) { 
+		console.log(JSON.stringify(error));
+		alert("Error when creating an answer"); 
+	}); 
 }
 
 //when we got an answer from a remote user
@@ -218,9 +228,18 @@ function wsHandleAnswer(answer, sender) {
   
 //when we got an ice candidate from a remote user 
 function wsHandleCandidate(candidate, sender) { 
-	//console.log('event=> ' + JSON.stringify(candidate));
-	console.log('sender=> ' + sender);
-	remoteConn.addIceCandidate(new RTCIceCandidate(candidate)); 
+	console.log('wsHandleCandidate sender=> ' + sender);
+	//if (sender === 'local') {
+		//console.log("wsHandleCandidate ICE connection state: <Before> " + remoteConn.iceConnectionState); 
+		remoteConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
+			function() {
+				//$(statsBox).append('<p style="font-weight: bold;">remoteConn AddIceCandidate success.</p>');
+				console.log("remoteConn AddIceCandidate success.");
+				//console.log("wsHandleCandidate ICE connection state: <After> " + remoteConn.iceConnectionState); 
+			},
+			function(error) {$(errorBox).append('<p>remoteConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
+		);
+	//}
 };
 
 function wsHandleLeave() {
@@ -274,12 +293,16 @@ function doInitMedia() {
 		} 
 	 };
 
- 	 remoteMediaConn.oniceconnectionstatechange = function(event) {
-		console.log('Remote ICE state change event: ', event);
+ 	remoteMediaConn.oniceconnectionstatechange = function(event) {
+		console.log('RemoteMedia ICE state change event: ', event);
 		const peerConnection = event.target;
 		//console.log('remoteMediaConn.iceConnectionState: ' + remoteMediaConn.iceConnectionState);
-		remoteMediaConn = peerConnection;
-	 };
+		const ref = peerConnection.iceConnectionState;
+		if (ref!== "closed" && ref !== "failed" && ref !== "disconnected" && ref !== "completed") {
+			remoteMediaConn = peerConnection;
+		}
+
+	};
 
 	remoteMediaConn.ontrack = function(event) {
 		remoteMediaStream = event.streams[0];
@@ -295,26 +318,24 @@ function doStartShareMedia(){
 
 //when somebody sends us an offer 
 function xsHandleOffer(offer, sender) {
-	//if (clientId !== peerId)	{
-		remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
+	remoteMediaConn.setRemoteDescription(new RTCSessionDescription(offer));
+	
+	//create an answer to an offer 
+	remoteMediaConn.createAnswer(function (answer) { 
+		//console.log('Client\'s Answer with message' + JSON.stringify(answer));
+		remoteMediaConn.setLocalDescription(answer); 
+		ws.send(JSON.stringify({ 
+			channel: "media",
+			type: "answer", 
+			answer: answer,
+			sender: 'remote',
+			name: myname,
+			clientId: this.clientId,
+		})); 
 		
-		//create an answer to an offer 
-		remoteMediaConn.createAnswer(function (answer) { 
-			//console.log('Client\'s Answer with message' + JSON.stringify(answer));
-			remoteMediaConn.setLocalDescription(answer); 
-			ws.send(JSON.stringify({ 
-				channel: "media",
-				type: "answer", 
-				answer: answer,
-				sender: 'remote',
-				name: myname,
-				clientId: this.clientId,
-			})); 
-			
-	   }, function (error) { 
-			console.log('Media Creaate Answer Error: ' + JSON.stringify(error));
-	   }); 
-	//}
+   }, function (error) { 
+		console.log('Media Creaate Answer Error: ' + JSON.stringify(error));
+   }); 
 }
 
 //when we got an answer from a remote user
@@ -326,10 +347,15 @@ function xsHandleAnswer(answer, sender) {
 //when we got an ice candidate from a remote user 
 function xsHandleCandidate(candidate, sender) { 
 	//console.log('xsHandleCandidate=> ' + JSON.stringify(candidate));
+	console.log('xsHandleCandidate sender=> ' + sender);
 	if (sender === 'local') {
 		remoteMediaConn.addIceCandidate(new RTCIceCandidate(candidate)).then(
-			function() {console.log('remoteMediaConn AddIceCandidate success.');},
-			function(error) {console.log('remoteMediaConn Failed to add Ice Candidate:' + error.toString());}
+			function() {
+				//$(statsBox).append('<p style="font-weight: bold;">remoteConn AddIceCandidate success.</p>');
+				console.log("remoteMediaConn AddIceCandidate success.");
+				//console.log("xsHandleCandidate ICE connection state: <After> " + remoteConn.iceConnectionState); 
+			},
+			function(error) {$(errorBox).append('<p>remoteMediaConn Failed to add Ice Candidate:'+ error.toString() + '</p>');}
 		);
 	}
 };

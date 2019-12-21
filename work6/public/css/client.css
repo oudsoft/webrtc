@@ -42,6 +42,15 @@ video {
 	right: 4px; 
 }
 
+.error-box {
+	position: relative;
+	color: red;
+}
+.stats-box {
+	position: relative;
+	color: blue;
+}
+
 /* Chat Area*/
 #ChatScreen {
 	width: 30%;

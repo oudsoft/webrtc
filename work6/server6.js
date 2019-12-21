@@ -4,7 +4,7 @@ const https = require('https');
 const express = require('express');
 const app = express();
 
-const serverPort = 4433;
+const serverPort = 443;
 const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
 const certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
 
@@ -156,7 +156,7 @@ wss.on('connection', function (ws, req) {
 				wss.clients.forEach(function each(client) {
 					//if (client !== ws && client.readyState === 1) {
 					if (client.readyState === 1 ) {
-						client.send(JSON.stringify({ channel: data.channel, type: "start", start: data.start, sender: data.sender, name: data.name, clientId: client.id}));
+						client.send(JSON.stringify({ channel: data.channel, type: "start", start: data.start, sender: data.sender, name: data.name, clientId: data.clientId}));
 					}
 				});
             break;

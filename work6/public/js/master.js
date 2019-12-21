@@ -6,7 +6,8 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
-	ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
+	//ws = new WebSocket('wss://' + hostname + ':4433/' + roomname + '?type=' + myname);
+		ws = new WebSocket('wss://' + hostname + '/' + roomname + '?type=' + myname);
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server')
 	}
@@ -156,22 +157,20 @@ function doStartShareScreen() {
 		delay(2000).then(function() {
 			let localConn = localPeers[i].localConn;
 			let peerId = localPeers[i].clientId;
-			//if (clientId !== peerId )	{
-				localConn.createOffer(function (offer) { 
-					localConn.setLocalDescription(offer); 
-					ws.send(JSON.stringify({ 
-						channel: "screen",
-						type: "offer", 
-						offer: offer ,
-						sender: 'local',
-						name: myname,
-						clientId: peerId
-					})); 
+			localConn.createOffer(function (offer) { 
+				localConn.setLocalDescription(offer); 
+				ws.send(JSON.stringify({ 
+					channel: "screen",
+					type: "offer", 
+					offer: offer ,
+					sender: 'local',
+					name: myname,
+					clientId: peerId
+				})); 
 
-				}, function (error) { 
-					alert("WSError when creating an offer"); 
-				});
-			//}
+			}, function (error) { 
+				alert("WSError when creating an offer"); 
+			});
 		});
 	}
 }
@@ -204,7 +203,7 @@ function wsHandleAnswer(answer, sender, clientId) {
 		getLocalConnById(clientId).then(function(localConn) {
 			if (localConn){
 				localConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
-					function() {$(statsBox).append('<p  style="font-weight: bold;">localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
+					function() {$(statsBox).append('<p style="font-weight: bold;">localConn setRemoteDescription success.</p>'); wsHandChecked = true;},
 					function(error) {$(errorBox).append('<p>localConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
 				);
 		  }
@@ -232,9 +231,25 @@ function wsHandleCandidate(candidate, sender, AClientId) {
 	}
 };
 
-function wsHandleStart(start, sender, clientId) {
+function wsHandleStart(start, sender, AClientId) {
 	if (sender==='remote') {
-		doStartShareScreen();
+		console.log('AClientId=> ' + AClientId);
+		getLocalConnById(AClientId).then(function(localConn) {
+			localConn.createOffer(function (offer) { 
+				localConn.setLocalDescription(offer); 
+				ws.send(JSON.stringify({ 
+					channel: "screen",
+					type: "offer", 
+					offer: offer ,
+					sender: 'local',
+					name: myname,
+					clientId: AClientId
+				})); 
+
+			}, function (error) { 
+				alert("WSError when creating an offer"); 
+			});
+		});
 	}
 }
 
@@ -374,7 +389,7 @@ function xsHandleAnswer(answer, sender, clientId) {
 		getLocalMediaConnById(clientId).then(function(localMediaConn) {
 			if (localMediaConn) {
 				localMediaConn.setRemoteDescription(new RTCSessionDescription(answer)).then(
-					function() {$(statsBox).append('<p>localMediaConn setRemoteDescription success.</p>'); xsHandChecked = true;},
+					function() {$(statsBox).append('<p style="font-weight: bold;>localMediaConn setRemoteDescription success.</p>'); xsHandChecked = true;},
 					function(error) {$(errorBox).append('<p>localMediaConn Failed to setRemoteDescription:' + error.toString() + '</p>');}
 				);
 		  }
