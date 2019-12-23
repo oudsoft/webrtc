@@ -12,7 +12,6 @@
 	<body>
 		<h1>Master Screen</h1>
 		<div id="Main">
-			<button id="btn-connect-server" onclick="doConnect()">Start Connect</button>
 			<div id="localScreen">
 				<h2>Local Screen</h2>
 			    <video id="localVideo" controls autoplay playsinline muted="false" volume="0"></video>
@@ -29,9 +28,10 @@
 				<button id="btn-start-getLocalMedia" onclick="doGetLocalMedia()">Get Local Media</button>
 				<button id="btn-start-shareLocalMedia" onclick="doStartShareMedia()">Start Share Local Media</button>
 				<button id="btn-stop-shareLocalMedia" onclick="doStopShareMedia()">Stop Share Local Media</button>
-				<div>&nbsp;</div>
-				<button id="btn-test-call" onclick="doTest()">Test Call</button>
 			</div>
+			<div>&nbsp;</div>
+			<button id="btn-connect-server" onclick="doConnect()">Start Connect</button>
+			<button id="btn-test-call" onclick="doTest()">Test Call</button>
 			<div id="ChatScreen">
 				<div id="ClientProfile"></div>
 				<div id="MessageScreen">
@@ -168,7 +168,7 @@
 					type: "message", 
 					message: {msg: userMsg, timestamp: new Date(), clientname: myname, fromId: clientNo, toId: 'all', roomName: roomname},
 					name: myname,
-					sender: 'client',
+					sender: 'master',
 					sendto: 'all'
 			   })); 
 			   $('#usermessage').val('');
@@ -182,4 +182,15 @@
 			alert("โปรดพิมพ์ข้อความที่ต้องการส่ง");
 		}
 	}
+
+  window.onbeforeunload = function(event) {
+  	console.log('<<refresh window>>>');
+   	ws.send(JSON.stringify({ 
+			channel: "chat",
+			type: "refresh", 
+			name: myname,
+			sender: 'master',
+			sendto: 'all'
+   	})); 
+  };	
 </script>

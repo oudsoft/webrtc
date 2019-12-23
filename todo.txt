@@ -28,3 +28,5 @@ Work Line
 		https://stackoverflow.com/questions/29071360/multi-peer-connection-in-webrtc
 		https://www.codeproject.com/Questions/1252725/How-do-I-add-multiple-peer-connections-webrtc
 		https://bloggeek.me/webrtc-rtcpeerconnection-one-per-stream/
+
+7. รับ-ส่ง ข้อความผ่าน Webseocket แบบ Chat

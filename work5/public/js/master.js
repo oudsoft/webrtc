@@ -6,7 +6,11 @@ const hostname = window.location.hostname;
 var ws = null;
 
 function doConnect() {
+<<<<<<< HEAD
 	ws = new WebSocket('wss://' + hostname + '/' + roomname);
+=======
+	ws = new WebSocket('wss://' + hostname + ':4432/' + roomname);
+>>>>>>> 679bd75e8aa952541d20c2311ea78cdeac8d0a7d
 	ws.onopen = function () {
 		console.log('Websocket is connected to the signaling server')
 	}

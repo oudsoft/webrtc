@@ -4,7 +4,11 @@ const https = require('https');
 const express = require('express');
 const app = express();
 
+<<<<<<< HEAD:work5/server5.js
 const serverPort = 443;
+=======
+const serverPort = 4432;
+>>>>>>> 679bd75e8aa952541d20c2311ea78cdeac8d0a7d:work5/server5.js
 const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
 const certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
 
@@ -189,7 +193,11 @@ wss.on('connection', function (ws, req) {
 						});
 					});
 				} else {
+<<<<<<< HEAD:work5/server5.js
 					let sendto = wss.clients.filter(function(client){ return client.id === data.sendto;});
+=======
+					let sendto = wss.clients.filter(function(client){ return client.id==data.sendto;});
+>>>>>>> 679bd75e8aa952541d20c2311ea78cdeac8d0a7d:work5/server5.js
 					if (sendto) {
 						sendto.send(JSON.stringify({channel: 'chat', type: 'message', message: data.message}));
 					}

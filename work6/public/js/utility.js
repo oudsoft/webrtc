@@ -95,8 +95,20 @@ function handleRegister(data) {
 	clientProfile.appendChild(userProfile);
 	clientId = data.clientId;
 	clientNo = data.clientNo;
+	if (data.masterId){
+		masterId = data.masterId;
+		console.log('data.masterId: ' + data.masterId);
+	}
+	if (data.masterNo){
+		masterNo = data.masterNo;
+	}
 }
 
 function scrollToBottom(e) {
   e.scrollTop = e.scrollHeight - e.getBoundingClientRect().height;
+}
+
+function handleRefreshWindow() {
+	console.log('<<Client Refresh>>');
+	window.location.reload(true); 
 }

@@ -2,9 +2,10 @@ const os = require('os');
 const fs = require('fs');
 const https = require('https');
 const express = require('express');
+const request = require('request');
 const app = express();
 
-const serverPort = 4433;
+const serverPort = 443;
 const privateKey = fs.readFileSync(__dirname + '/ssl-cert/server.pem', 'utf8');
 const certificate = fs.readFileSync(__dirname + '/ssl-cert/server.crt', 'utf8');
 
@@ -27,6 +28,34 @@ app.use(function(req, res, next) {
 	next();
 });
 
+app.all('/shop', function(req,res) {
+  //modify the url in any way you want
+  let newurl = 'http://202.28.68.6/shop/';
+  request(newurl).pipe(res);
+  //console.log(res);
+});
+
+app.all('/mshop', function(req,res) {
+  //modify the url in any way you want
+  let newurl = 'http://202.28.68.6/mshop/';
+  request(newurl).pipe(res);
+  //console.log(res);
+});
+
+app.all('/shopdoc', function(req,res) {
+  //modify the url in any way you want
+  let newurl = 'http://202.28.68.6/shopdoc/';
+  request(newurl).pipe(res);
+  //console.log(res);
+});
+
+app.all('/shopmsg', function(req,res) {
+  //modify the url in any way you want
+  let newurl = 'http://202.28.68.6/shopmsg/';
+  request(newurl).pipe(res);
+  //console.log(res);
+});
+
 const httpsServer = https.createServer(credentials, app).listen(serverPort);
 
 /* WS */
@@ -40,6 +69,8 @@ const wss = new WebSocketServer({server: httpsServer, path: '/' + roomname});
 const rooms = [];
 const newChatRoom = {roomName: roomname, users: [], messages: []};
 rooms.push(newChatRoom);
+let masterId = '';
+let masterNo = '';
 
 wss.getUniqueID = function () {
     function s4() {
@@ -54,16 +85,34 @@ wss.getNextClientNo = function () {
 };
 
 wss.on('connection', function (ws, req) {
+	//console.log(`WS Conn Url : ${req.url}`);
+	let fullReqPaths = req.url.split('?');
+	let connType = fullReqPaths[1].split('=');
+	//console.log(connType);
 	ws.id = wss.getUniqueID();
 	let yourNo = wss.getNextClientNo();
-	console.log('Client ID: ' + ws.id /*JSON.stringify(ws)*/);
-	console.log('YourNo: ' + yourNo);
-	ws.send(JSON.stringify({channel: 'chat', type: 'register', clientId: ws.id, clientNo: yourNo}));
+	//console.log('Client ID: ' + ws.id /*JSON.stringify(ws)*/);
+	//console.log('YourNo: ' + yourNo);
+	
+	let newclientObject = null;
+	if (connType[1] === 'master'){
+		masterId = ws.id;
+		masterNo = yourNo;
+		newclientObject = {clientType: 'master', clientId: ws.id, clientNo: yourNo, masterId: masterId, masterNo: masterNo};
+	} else if (connType[1] === 'client'){
+		newclientObject = {clientType: 'client',  clientId: ws.id, clientNo: yourNo, masterId: masterId, masterNo: masterNo};
+	} else {
+		newclientObject = {error: 'Wrong Connection'};
+	}
+	newclientObject.type = "register";
+	newclientObject.channel = "chat";
+	ws.send(JSON.stringify(newclientObject));
 
+	newclientObject.type = "newclient";
 	let clients = wss.clients;
 	clients.forEach(function each(client) {
 		if (client.readyState === 1 ) {
-			client.send(JSON.stringify({ type: "newclient", clientId: ws.id}));
+			client.send(JSON.stringify(newclientObject));
 		}
 	});
 
@@ -89,33 +138,40 @@ wss.on('connection', function (ws, req) {
 		//switching type of the user message 
 		switch (data.type) { 
 			case "offer": 
-				console.log("WS Sending offer to: ", data.name);	
+				console.log("WS Receive Offer From " + data.name + "[" + masterId + "]" + " and Sending Offer To: " + data.clientId);	
 				//console.log("offer : ", JSON.stringify(data.offer));
 				wss.clients.forEach(function each(client) {
+					console.log('Offer: client.id: ' + client.id);
+					console.log('Offer: data.clienId: ' + data.clientId);
 					//if (client !== ws && client.readyState === 1) {
-					if (client.readyState === 1 ) {
-						client.send(JSON.stringify({ channel: data.channel, type: "offer", offer: data.offer, sender: data.sender, name: data.name, clientId: client.id}));
+					if ((client.readyState === 1 ) && (client.id === data.clientId)){
+						client.send(JSON.stringify({ channel: data.channel, type: "offer", offer: data.offer, sender: data.sender, name: data.name, clientId: data.clientId}));
+						console.log('Offer: Sent');
+					} else {
+						console.log('Offer: Unsent');
 					}
 				});
             break;
 				
 			case "answer": 
-				console.log("WS Sending answer to: ", data.name); 
+				console.log("WS Receive Answer From " + data.name + "[" + data.clientId + "]" + " and Sending Answer To: " + "[" + masterId + "]"); 
 				//console.log("answer : ", JSON.stringify(data.answer));	
 				wss.clients.forEach(function each(client) {
-					console.log('wsId: ' + ws.id);
-					console.log('clienId: ' + client.id);
+					console.log('Answer: client.id: ' + client.id);
+					console.log('Answer: data.clienId: ' + data.clientId);
 					//if (client !== ws && client.readyState === 1) {
-					if (client.readyState === 1 ) {
-						client.send(JSON.stringify({ channel: data.channel, type: "answer", answer: data.answer, sender: data.sender, name: data.name, clientId: client.id}));
+					if ((client.readyState === 1 ) && (client.id === masterId) ){
+						client.send(JSON.stringify({ channel: data.channel, type: "answer", answer: data.answer, sender: data.sender, name: data.name, clientId: data.clientId}));
+						console.log('Answer: Sent');
+					} else {
+						console.log('Answer: Unsent');
 					}
 				});
             break; 
 				
 			case "candidate": 
-				console.log("WS Sending candidate to:",data.name); 
-				//console.log("candidate : ", JSON.stringify(data.candidate));	
 				wss.clients.forEach(function each(client) {
+					console.log("WS Sending candidate to:"+  data.name  + "[" + client.id + "]"); 
 					//if (client !== ws && client.readyState === 1) {
 					if (client.readyState === 1 ) {
 						client.send(JSON.stringify({ channel: data.channel, type: "candidate", candidate: data.candidate, sender: data.sender, name: data.name, clientId: client.id}));
@@ -129,7 +185,7 @@ wss.on('connection', function (ws, req) {
 				wss.clients.forEach(function each(client) {
 					//if (client !== ws && client.readyState === 1) {
 					if (client.readyState === 1 ) {
-						client.send(JSON.stringify({ channel: data.channel, type: "start", start: data.start, sender: data.sender, name: data.name, clientId: client.id}));
+						client.send(JSON.stringify({ channel: data.channel, type: "start", start: data.start, sender: data.sender, name: data.name, clientId: data.clientId}));
 					}
 				});
             break;
@@ -160,28 +216,6 @@ wss.on('connection', function (ws, req) {
 				console.log("WS Sending message to:",data.name); 
 				console.log("message: ", JSON.stringify(data.message));	
 				if (data.sendto === 'all') {
-					// save message to message of room
-					// ...
-					/*
-						room >> user >> messages
-						roomname
-						messages
-							message {sendat, type, sendfrom, sendto, msg}
-
-						users
-							user {clientId/id, name}
-					*/
-					/*
-					onClientConnect
-						1. clientRegister
-							serverCreate clientId and send to new Client
-							serverSend Annount newClientConnect to All Client's Connected
-								Master register NewClient with new Peer and save to Peers Array
-								Master start Offer for new Peer
-						2. 
-					onClientDisconnect
-						1. clientUnRegister
-					*/
 					getRoomByName(data.message.roomName).then(function(room) {
 						room.messages.push(data.message);
 						wss.clients.forEach(function each(client) {
